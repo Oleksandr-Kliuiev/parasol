@@ -95,6 +95,28 @@ class OperationsTests(unittest.TestCase):
                 settings = json.loads((state / 'config' / f'{name}.json').read_text())
                 self.assertEqual(settings['Deployment'], {'Environment': expected}, f'{kind} {name}.json')
 
+    def test_behind_a_shared_proxy_caddy_leaves_80_443_and_believes_only_that_proxy(self):
+        root = self.root.resolve()
+        (root / 'entra.pfx').write_bytes(b'synthetic certificate')
+        (root / 'entra-password').write_text('synthetic')
+        production = {'domain': 'crm.example.no', 'tenant': str(uuid.uuid4()), 'client': str(uuid.uuid4()),
+                      'oidc': root / 'entra.pfx', 'password_file': root / 'entra-password', 'release': 'synthetic'}
+        initialize(root / 'direct', **production)
+        direct = json.loads((root / 'direct' / 'stack.json').read_text())['compose']
+        self.assertEqual((direct['SITE_ADDRESS'], direct['HTTPS_PORT'], direct['EDGE_NETWORK']), ('crm.example.no', '443', ''))
+        self.assertEqual(direct['TRUSTED_PROXIES'], '127.0.0.1/32')
+        initialize(root / 'edge', edge_network='shared_edge', edge_subnet='172.18.0.0/16', **production)
+        edge = json.loads((root / 'edge' / 'stack.json').read_text())['compose']
+        self.assertEqual(edge['SITE_ADDRESS'], 'http://crm.example.no')
+        self.assertEqual((edge['BIND_ADDRESS'], edge['HTTP_PORT'], edge['HTTPS_PORT']), ('127.0.0.1', '18090', '18490'))
+        self.assertEqual((edge['EDGE_NETWORK'], edge['EDGE_EXTERNAL'], edge['TRUSTED_PROXIES']), ('shared_edge', 'true', '172.18.0.0/16'))
+        for bad in [{'edge_network': 'shared_edge'}, {'edge_subnet': '172.18.0.0/16'},
+                    {'edge_network': 'shared edge', 'edge_subnet': '172.18.0.0/16'},
+                    {'edge_network': 'shared_edge', 'edge_subnet': 'not-a-network'}]:
+            with self.assertRaises(ValueError):
+                initialize(root / 'refused', **production, **bad)
+            self.assertFalse((root / 'refused').exists())
+
     def test_failed_command_withholds_output_but_keeps_a_tail_for_the_drill(self):
         with self.assertRaises(RuntimeError) as caught:
             run([sys.executable, '-c', 'import sys; sys.stderr.write("synthetic-secret"); sys.exit(3)', '/private/path', 'word'])

@@ -61,6 +61,12 @@ SQL настроен как **Express**, не Developer/Evaluation. Express им
    (не пересекается с сетями хоста/VPN/Docker), IP Caddy `.254`, порты и редакцию SQL.
    При смене subnet обновить `Forwarded:KnownProxies` в `config/web.json` и `migrate.json`.
    `READ_ONLY=true` оставить до завершения первоначальной настройки.
+   **За общим прокси.** Если 80/443 на VPS уже занимает прокси других проектов (Caddy на общей Docker-сети),
+   добавить к `init` `--edge-network <сеть> --edge-subnet <её subnet>` (subnet:
+   `docker network inspect <сеть> --format '{{(index .IPAM.Config 0).Subnet}}'`). Тогда Caddy CRM слушает 80/443
+   только на 127.0.0.1:18090/18490, входит в эту сеть, отдаёт прокси обычный HTTP и верит его `X-Forwarded-*`
+   лишь из этого subnet; TLS и сертификат остаются у общего прокси. В его конфигурацию добавить сайт
+   `<домен> { log_skip; reverse_proxy <project>-caddy-1:80 }` (имя project — в `stack.json`) и перечитать её.
 6. Настроить offsite backup (ниже), вынести recovery kit в отдельное защищённое место.
 7. Выполнить последовательно:
 

@@ -1,4 +1,5 @@
 """Create a new private installation. Existing state/credentials are never overwritten."""
+import ipaddress
 import json
 from pathlib import Path
 import re
@@ -19,7 +20,8 @@ def certificate(config, password):
         (config / name).unlink()
 
 
-def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, oidc=None, password_file=None, release='local'):
+def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, oidc=None, password_file=None, release='local',
+               edge_network=None, edge_subnet=None):
     path = private_path(path)
     if path.exists():
         raise ValueError('Destination must not exist; existing state is never initialized again')
@@ -31,6 +33,14 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
         uuid.UUID(tenant); uuid.UUID(client)
         if not oidc or not password_file:
             raise ValueError('OIDC certificate and password file are required')
+    # Behind a proxy the host already runs on 80/443: Caddy joins that proxy's network, serves plain HTTP to it alone and
+    # believes its X-Forwarded-* only from that network. TLS and certificates stay with the shared proxy.
+    if bool(edge_network) != bool(edge_subnet):
+        raise ValueError('An edge network needs its subnet, and a subnet its network')
+    if edge_network:
+        if rehearsal or not re.fullmatch(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,62}', edge_network):
+            raise ValueError('Invalid edge network')
+        edge_subnet = str(ipaddress.ip_network(edge_subnet))
     path.mkdir(parents=True, mode=0o700)
     path.chmod(0o700)
     for name in ('config', 'data/documents', 'data/keyring', 'data/caddy', 'data/caddy-config', 'backup', 'repository'):
@@ -84,8 +94,12 @@ def initialize(path, *, rehearsal=False, domain=None, tenant=None, client=None, 
         '  UserKnownHostsFile /run/backup/known_hosts\n  StrictHostKeyChecking yes\n  BatchMode yes\n  ConnectTimeout 20\n  ServerAliveInterval 30\n  ServerAliveCountMax 3\n')
     write_json(path / 'stack.json', {
         'format': 1, 'kind': 'rehearsal' if rehearsal else 'production', 'project': f'parasol-{secrets.token_hex(5)}',
-        'volumeId': volume, 'compose': {'RELEASE': release, 'SITE_ADDRESS': 'http://localhost' if rehearsal else domain,
-            'TLS_EMAIL': 'operator@example.invalid', 'BIND_ADDRESS': '127.0.0.1' if rehearsal else '0.0.0.0',
-            'HTTP_PORT': '18088' if rehearsal else '80', 'HTTPS_PORT': '18488' if rehearsal else '443',
+        'volumeId': volume, 'compose': {'RELEASE': release,
+            'SITE_ADDRESS': 'http://localhost' if rehearsal else f'http://{domain}' if edge_network else domain,
+            'TLS_EMAIL': 'operator@example.invalid', 'BIND_ADDRESS': '127.0.0.1' if rehearsal or edge_network else '0.0.0.0',
+            'HTTP_PORT': '18088' if rehearsal else '18090' if edge_network else '80',
+            'HTTPS_PORT': '18488' if rehearsal else '18490' if edge_network else '443',
             'PROXY_SUBNET': f'172.30.{octet}.0/24', 'PROXY_IP': f'172.30.{octet}.254',
+            'EDGE_NETWORK': edge_network or '', 'EDGE_EXTERNAL': 'true' if edge_network else 'false',
+            'TRUSTED_PROXIES': edge_subnet or '127.0.0.1/32',
             'READ_ONLY': 'true', 'ISOLATED': 'true' if rehearsal else 'false', 'MSSQL_PID': 'Express'}})
