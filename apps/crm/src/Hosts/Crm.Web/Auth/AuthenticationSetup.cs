@@ -370,8 +370,10 @@ public static class AuthenticationSetup
         {
             // Force a refresh-token redemption: fails if the account was disabled, the password reset or sessions revoked.
             var tokens = context.HttpContext.RequestServices.GetRequiredService<ITokenAcquisition>();
+            // The scheme is named: left out, Microsoft.Identity.Web takes the default (cookie) scheme, which has no Entra options.
             await tokens.GetAccessTokenForUserAsync(
-                RevalidationScopes, user: principal, tokenAcquisitionOptions: new TokenAcquisitionOptions { ForceRefresh = true });
+                RevalidationScopes, authenticationScheme: OpenIdConnectDefaults.AuthenticationScheme, user: principal,
+                tokenAcquisitionOptions: new TokenAcquisitionOptions { ForceRefresh = true });
         }
         catch (Exception ex) when (ex is MicrosoftIdentityWebChallengeUserException or MsalUiRequiredException or System.Security.Cryptography.CryptographicException)
         {

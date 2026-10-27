@@ -10,6 +10,7 @@ using Crm.Integrations.Core;
 using Crm.Web.Auth;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
@@ -837,6 +838,13 @@ internal sealed class ScriptedTokenAcquisition : ITokenAcquisition
         ClaimsPrincipal? user = null, TokenAcquisitionOptions? tokenAcquisitionOptions = null)
     {
         Interlocked.Increment(ref _calls);
+        // Like Microsoft.Identity.Web: without the OpenID Connect scheme it falls back to the default (cookie) scheme, which has
+        // no Entra options, and throws IDW10503 — every request of a session then failed an hour after sign-in (27.10.2026).
+        if (authenticationScheme != OpenIdConnectDefaults.AuthenticationScheme)
+        {
+            return Task.FromException<string>(new InvalidOperationException("IDW10503: Cannot determine the cloud Instance."));
+        }
+
         return Next is { } error ? Task.FromException<string>(error) : Task.FromResult("refreshed-for-test");
     }
 

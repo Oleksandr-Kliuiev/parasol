@@ -1,4 +1,5 @@
 using Crm.Integrations.MicrosoftGraph;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Web;
 
@@ -24,7 +25,9 @@ internal sealed class EntraDelegatedTokenSource(
 
         try
         {
-            return await tokens.GetAccessTokenForUserAsync(scopes, user: user);
+            // Named for the same reason as the session revalidation: the default scheme is the cookie, which has no Entra options.
+            return await tokens.GetAccessTokenForUserAsync(
+                scopes, authenticationScheme: OpenIdConnectDefaults.AuthenticationScheme, user: user);
         }
         catch (MicrosoftIdentityWebChallengeUserException exception)
         {
