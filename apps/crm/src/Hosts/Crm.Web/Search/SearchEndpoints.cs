@@ -2,7 +2,8 @@ using Crm.SharedKernel.Application;
 
 namespace Crm.Web.Search;
 
-public sealed record SearchGroup(string Group, IReadOnlyList<SearchHit> Items);
+/// <summary>One group of hits; <paramref name="More"/> says the group found more than it shows, so the interface asks for more words.</summary>
+public sealed record SearchGroup(string Group, IReadOnlyList<SearchHit> Items, bool More);
 
 public sealed record SearchResponse(string Query, IReadOnlyList<SearchGroup> Groups);
 
@@ -13,7 +14,7 @@ public static class SearchEndpoints
 
     public static IEndpointRouteBuilder MapSearchEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet(Route, async (string? q, int? take, IEnumerable<ISearchProvider> providers, ICurrentUser user, CancellationToken ct) =>
+        app.MapGet(Route, async (string? q, int? take, string? groups, IEnumerable<ISearchProvider> providers, ICurrentUser user, CancellationToken ct) =>
             {
                 if (SearchTerm.Parse(q) is not { } term)
                 {
@@ -24,18 +25,23 @@ public static class SearchEndpoints
                 }
 
                 var limit = Math.Clamp(take ?? 5, 1, 20);
-                var groups = new List<SearchGroup>();
+                // A picker that needs one kind of record names its group, so the others are not searched for nothing.
+                var wanted = groups?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.Ordinal);
+                var found = new List<SearchGroup>();
                 // Providers share the request's DbContext instances, so they run sequentially.
-                foreach (var provider in providers.Where(p => user.HasPermission(p.RequiredPermission)).OrderBy(p => p.Order))
+                foreach (var provider in providers
+                             .Where(p => user.HasPermission(p.RequiredPermission) && (wanted is not { Count: > 0 } || wanted.Contains(p.Group)))
+                             .OrderBy(p => p.Order))
                 {
-                    var items = await provider.SearchAsync(term, limit, ct);
+                    // One more than is shown says whether there are more, without counting them all (DEV-12: never a silent cut).
+                    var items = await provider.SearchAsync(term, limit + 1, ct);
                     if (items.Count > 0)
                     {
-                        groups.Add(new SearchGroup(provider.Group, items));
+                        found.Add(new SearchGroup(provider.Group, items.Take(limit).ToList(), items.Count > limit));
                     }
                 }
 
-                return Results.Ok(new SearchResponse(term.Text, groups));
+                return Results.Ok(new SearchResponse(term.Text, found));
             })
             .WithTags("Search");
         return app;

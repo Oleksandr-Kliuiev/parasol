@@ -693,6 +693,8 @@ namespace Crm.Service.Persistence.Migrations
                     b.HasIndex("MachineId")
                         .HasFilter("[MachineId] IS NOT NULL");
 
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("MachineId"), new[] { "MachineName", "SerialNumber", "LastLoginUser", "LoggedInUsers" });
+
                     b.HasIndex("OrganizationId", "RemovedAt");
 
                     b.HasIndex("System", "ExternalId")
@@ -1017,6 +1019,8 @@ namespace Crm.Service.Persistence.Migrations
 
                     b.HasIndex("ContactId")
                         .HasFilter("[ContactId] IS NOT NULL");
+
+                    b.HasIndex("ExternalId");
 
                     b.HasIndex("IsOpen")
                         .HasFilter("[IsOpen] = 1");

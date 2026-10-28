@@ -30,6 +30,8 @@ public static class BackupModule
         services.AddScoped<BackupQueries>();
         services.AddScoped<IBackupFacts, BackupFacts>();
         services.AddScoped<LicensedUsers>();
+        // Global search finds the people and sites in the customers' backups, with the rights of the tab that shows them.
+        services.AddScoped<Crm.SharedKernel.Application.ISearchProvider, BackupSearchProvider>();
         // M42: the coverage rules of backups, checked by the Service module after each complete read of CloudAlly.
         services.AddScoped<ICoverageRule, BackupFailedRule>();
         services.AddScoped<ICoverageRule, BackupLateRule>();

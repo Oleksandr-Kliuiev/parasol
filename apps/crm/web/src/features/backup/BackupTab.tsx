@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import {
   Badge, Button, Menu, MenuItem, MenuList, MenuPopover, MenuTrigger, MessageBar, MessageBarBody, SearchBox, Text, makeStyles, mergeClasses,
   useRestoreFocusTarget,
@@ -54,7 +55,27 @@ function SavedBackup({ organizationId, owner }: { organizationId: string; owner:
   const [revision, setRevision] = useState(0); const refreshing = useRef(false); const scope = { owner, revision };
   const [state, setState] = useState<StateFilter>('all');
   const [service, setService] = useState<'' | BackupService>('');
-  const [search, setSearch] = useState(''); const debounced = useDebouncedValue(search.trim());
+  // The search of people and sites lives in the address (?search=), so a hit of the global search opens the tab narrowed to the
+  // person or site it found and a reload keeps it; another tab of the customer starts without it.
+  const [params, setParams] = useSearchParams();
+  const urlSearch = params.get('search') ?? '';
+  const [search, setSearch] = useState(urlSearch); const debounced = useDebouncedValue(search.trim());
+  const [previousUrlSearch, setPreviousUrlSearch] = useState(urlSearch);
+  // A search hit opened while the tab is already shown: adopt it (React "adjust state on prop change"); the tab's own search
+  // reaching the address is not adopted back, or what was typed meanwhile would be replaced.
+  if (urlSearch !== previousUrlSearch) {
+    setPreviousUrlSearch(urlSearch);
+    if (urlSearch !== search.trim() && urlSearch !== debounced) setSearch(urlSearch);
+  }
+  useEffect(() => {
+    if ((params.get('search') ?? '') === debounced) return;
+    const next = new URLSearchParams(params);
+    if (debounced) next.set('search', debounced); else next.delete('search');
+    setParams(next, { replace: true });
+  }, [debounced, params, setParams]);
+  // Opened with a search (a hit of the global search): the people and sites are what was asked for, so their list is brought into
+  // view and takes focus once it is shown.
+  const people = useRef<HTMLHeadingElement>(null); const revealPeople = useRef(urlSearch !== '');
   const overview = useBackupOverview(organizationId, scope);
   const linkRead = useCloudAllyLinked(organizationId, scope);
   const actions = useBackupActions(); const canWrite = useCan(Permissions.serviceWrite);
@@ -67,6 +88,12 @@ function SavedBackup({ organizationId, owner }: { organizationId: string; owner:
   const services = data ? [...data.services].sort((a, b) => serviceOrder[a.service] - serviceOrder[b.service]) : [];
   const problems = services.reduce((sum, s) => sum + s.failed + s.late + s.paused + s.notInBackup, 0);
   const filtered = state !== 'all' || service !== '' || debounced !== '';
+  useEffect(() => {
+    if (!revealPeople.current || !linked || !people.current) return;
+    revealPeople.current = false;
+    people.current.focus({ preventScroll: true });
+    people.current.scrollIntoView?.({ block: 'start' });
+  }, [linked]);
 
   return <div className={styles.stack}>
     <Panel title={t('backup.title')} icon={<CloudArchive16Regular />}
@@ -99,7 +126,7 @@ function SavedBackup({ organizationId, owner }: { organizationId: string; owner:
       {data.tasks.length === 0 && <EmptyState compact icon={<CloudArchive24Regular />} message={t('backup.noTasks')} />}
     </Panel>}
 
-    {linked && <Panel title={t('backup.entities.title')} icon={<PeopleList16Regular />} flush className={flush.panel}>
+    {linked && <Panel title={t('backup.entities.title')} icon={<PeopleList16Regular />} flush className={flush.panel} headingRef={people}>
       <div className={styles.pad}>
         <Toolbar label={t('backup.entities.filters')} className={styles.toolbar}>
           <FilterField kind="search" label={t('backup.entities.search')}>
