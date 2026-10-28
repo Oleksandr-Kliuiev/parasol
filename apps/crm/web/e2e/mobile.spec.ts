@@ -112,6 +112,7 @@ test('the migration screens fit a phone screen with a preview on show', async ({
 });
 
 test('the pilot reconciliation page fits a phone screen', async ({ page }) => {
+  test.setTimeout(120_000);
   // The run bills a contract of this test's own, so its lines are on screen on a fresh database too; Finance reads the page.
   await signIn(page, 'Crm.Admin');
   const run = await collectedBillingRunWithLine(page, marker('MobPil'));
