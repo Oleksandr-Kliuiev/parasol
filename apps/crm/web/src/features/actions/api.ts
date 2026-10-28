@@ -58,14 +58,25 @@ export async function settleAction(action: VendorAction, outcome: 'Succeeded' | 
  * is about to offer it; false while unknown or unreadable.
  */
 export function useActionAvailable(system: string, kind: string, enabled = true): boolean {
-  const { data } = useQuery({
+  const data = useActionKinds(system, enabled);
+  return enabled && Array.isArray(data) && data.some((item) => item.kind === kind);
+}
+
+/** Whether the person may ask for this kind for many targets with one confirmation now (M45); false while unknown or unreadable. */
+export function useBatchAvailable(system: string, kind: string, enabled = true): boolean {
+  const data = useActionKinds(system, enabled);
+  return enabled && Array.isArray(data) && data.some((item) => item.kind === kind && item.batch === true);
+}
+
+/** The kinds the person may ask for now, one read a minute shared by every form that offers one. */
+function useActionKinds(system: string, enabled: boolean) {
+  return useQuery({
     queryKey: actionKeys.kinds(system),
     enabled,
     queryFn: async ({ signal }) => (await api.get<ActionKind[]>(`${BASE}/kinds${query({ system })}`, signal)).data,
     staleTime: 60_000,
     retry: false,
-  });
-  return enabled && Array.isArray(data) && data.some((item) => item.kind === kind);
+  }).data;
 }
 
 /** One action, read again every two seconds while the worker still has it (UX: a page that waits for the worker polls). */
@@ -120,12 +131,13 @@ export function useActionFacts(system: string, targetType: string, pages: readon
 const chunks = (ids: readonly string[], size: number) =>
   Array.from({ length: Math.ceil(ids.length / size) }, (_, index) => ids.slice(index * size, (index + 1) * size));
 
-/** After an action changed: every log, the facts beside list rows and the action itself are read again. */
+/** After an action changed: every log, the facts beside list rows, the batches followed (M45) and the action itself are read again. */
 export function useRefreshActions() {
   const client = useQueryClient();
   return useCallback((action?: VendorAction) => {
     if (action) client.setQueryData(actionKeys.one(action.id), action);
     void client.invalidateQueries({ queryKey: ['actions', 'log'] });
     void client.invalidateQueries({ queryKey: ['actions', 'facts'] });
+    void client.invalidateQueries({ queryKey: ['actions', 'batch'] });
   }, [client]);
 }

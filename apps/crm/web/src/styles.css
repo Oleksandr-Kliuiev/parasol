@@ -137,6 +137,12 @@ html {
     scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }
+/* M45: while the alert queue's bulk bar is held below the top bar, a focused row scrolls into view below both. */
+@media (min-width: 768px) {
+  html:has([data-alert-bulk-bar]) {
+    scroll-padding-top: 176px;
+  }
+}
 
 body {
   background: var(--h-bg);

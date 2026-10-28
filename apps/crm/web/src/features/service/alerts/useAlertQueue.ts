@@ -9,7 +9,22 @@ export interface AlertQueueFilters {
   severity: AlertSeverity | null;
   organizationId: string | null;
   search: string;
+  /** M45: the source as stored (`atera`, `huntress`, `parasoll`). */
+  system: string | null;
+  /** M45: only alerts their source raised more than this many days ago. */
+  olderThanDays: number | null;
 }
+
+/** The queue's filters as the API takes them: the list, its counts and "all that match" (M45) read the same filter. */
+export const queueParams = (filters: AlertQueueFilters) => ({
+  state: filters.state === 'Resolved' ? filters.state : undefined,
+  hidden: filters.state === 'Hidden' ? true : undefined,
+  severity: filters.severity ?? undefined,
+  organizationId: filters.organizationId ?? undefined,
+  q: filters.search || undefined,
+  system: filters.system ?? undefined,
+  olderThanDays: filters.olderThanDays ?? undefined,
+});
 
 /** One page of the queue holds what one task lookup may carry. */
 export const queuePageSize = 25;
@@ -21,13 +36,8 @@ export const queuePageSize = 25;
  * vanish while the answer is on its way.
  */
 export function useAlertQueue(filters: AlertQueueFilters) {
-  const list = usePagedList<Alert>(['service', 'alerts', 'queue', filters], '/api/v1/service/alerts', {
-    state: filters.state === 'Resolved' ? filters.state : undefined,
-    hidden: filters.state === 'Hidden' ? true : undefined,
-    severity: filters.severity ?? undefined,
-    organizationId: filters.organizationId ?? undefined,
-    q: filters.search || undefined,
-  }, { limit: queuePageSize, keepPrevious: true });
+  const list = usePagedList<Alert>(['service', 'alerts', 'queue', filters], '/api/v1/service/alerts', queueParams(filters),
+    { limit: queuePageSize, keepPrevious: true });
   // The queue's answer is a page with its severity counts; the generic list reader types only the paging part of it.
   const pages = list.data?.pages as AlertPage[] | undefined;
   const latest = pages?.at(-1);
