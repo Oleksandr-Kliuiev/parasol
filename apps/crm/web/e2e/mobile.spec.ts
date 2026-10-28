@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { huntressAlerts, huntressIncident, linkedHuntressCustomer, syncHuntress } from './huntress';
-import { collectedBillingRun, createContact, createOrganization, marker, signIn } from './support';
+import { collectedBillingRunWithLine, createContact, createOrganization, marker, signIn } from './support';
 
 const createContactForMobile = (page: Page, organizationId: string, m: string) =>
   createContact(page, organizationId, { firstName: 'Mobil', lastName: m, email: `${m.toLowerCase()}@example.no`, mobilePhone: '900 00 000' });
@@ -112,8 +112,10 @@ test('the migration screens fit a phone screen with a preview on show', async ({
 });
 
 test('the pilot reconciliation page fits a phone screen', async ({ page }) => {
+  // The run bills a contract of this test's own, so its lines are on screen on a fresh database too; Finance reads the page.
+  await signIn(page, 'Crm.Admin');
+  const run = await collectedBillingRunWithLine(page, marker('MobPil'));
   await signIn(page, 'Crm.Finance');
-  const run = await collectedBillingRun(page, marker('MobPil'));
   await page.goto(`/billing/runs/${run.id}/pilot`);
   await expect(page.getByRole('heading', { level: 1, name: 'Pilot reconciliation' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Lines of the run' })).toBeVisible();
