@@ -42,7 +42,8 @@ test('old Atera alerts are found by source and age and closed in Atera with one 
     await expect(results.getByText('Done', { exact: true })).toHaveCount(2);
     await dialog.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByText('Closing in Atera is done: all 2 handled.')).toBeVisible();
+    // The notice above the list, in the page: while the dialog leaves, its screen-reader status still says the same words.
+    await expect(page.getByRole('main').getByText('Closing in Atera is done: all 2 handled.')).toBeVisible();
     // The queue was read again when the batch was done: nothing of the filter is open any longer, so there is nothing to choose.
     await expect(bar).toHaveCount(0);
 
@@ -98,9 +99,9 @@ test('all alerts that match are hidden until a day with one reason across pages 
   await hideAll();
 
   // The way back, from the notice above the list: the same 26 are shown again, with no time limit to catch.
-  await expect(page.getByText(/^26 alerts hidden until /)).toBeVisible();
+  await expect(page.getByRole('main').getByText(/^26 alerts hidden until /)).toBeVisible();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByText('26 alerts are shown again.')).toBeVisible();
+  await expect(page.getByRole('main').getByText('26 alerts are shown again.')).toBeVisible();
   await expect(page.getByText('Showing 25 of 26')).toBeVisible();
 
   // Hidden again, all that match straight from the bar, and shown again from the Hidden list.
