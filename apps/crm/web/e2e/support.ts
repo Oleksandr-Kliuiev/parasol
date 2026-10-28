@@ -183,3 +183,24 @@ export async function collectedBillingRun(page: Page, notes: string): Promise<{ 
   await api.runCommand(page, run.id, 'collect');
   return run;
 }
+
+/**
+ * A collected run that bills a line of this test's own: a customer whose contract covers the run's month only. Otherwise a run of
+ * a future month bills only what earlier runs left in the database, so on a fresh one it has no lines; a test that needs them on
+ * screen uses this. Creating the customer takes customers.write (Crm.Admin, not Crm.Finance).
+ */
+export async function collectedBillingRunWithLine(page: Page, m: string): Promise<{ id: string }> {
+  const run = await reserveBillingRun(page, m);
+  const organization = await createOrganization(page, { name: `${m} Fakturert AS`, status: 'Customer' });
+  const product = await api.post<{ id: string }>(page, '/api/v1/catalog/products', {
+    sku: `${m}-DRIFT`, name: `${m} Drift`, type: 'ManagedService', businessLine: 'Atera', unit: 'Piece', billingPeriod: 'Monthly', vatRate: 25, listPrice: 900,
+  });
+  const contract = await api.post<{ id: string }>(page, '/api/v1/contracts', {
+    organizationId: organization.id, title: `${m} Avtale`, type: 'Msp', startDate: run.start, endDate: periodEnd(run), autoRenew: false,
+    renewalTermMonths: 0, noticePeriodDays: 30, invoiceFrequency: 'Monthly', invoiceTiming: 'InAdvance', indexation: false,
+  });
+  await api.post(page, `/api/v1/contracts/${contract.id}/lines`, { productId: product.id, quantityModel: 'Fixed', quantity: 1, unitPrice: 900, validFrom: run.start });
+  await api.post(page, `/api/v1/contracts/${contract.id}/activate`);
+  await api.runCommand(page, run.id, 'collect');
+  return run;
+}
