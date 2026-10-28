@@ -83,7 +83,7 @@ test('pages fit a phone screen and navigation works', async ({ page }) => {
 
   // Search is a dialog (the command palette), opened from the top bar on a phone.
   await page.getByRole('button', { name: 'Search', exact: true }).click();
-  const search = page.getByRole('dialog', { name: 'Search' }).getByRole('combobox', { name: 'Search organizations' });
+  const search = page.getByRole('dialog', { name: 'Search' }).getByRole('combobox', { name: 'Search customers, devices and more' });
   await search.fill(m);
   const option = page.getByRole('option', { name: new RegExp(`^${m} Mobil AS`) });
   await expect(option).toBeVisible();

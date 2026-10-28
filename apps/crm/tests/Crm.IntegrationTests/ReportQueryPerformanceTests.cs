@@ -263,6 +263,52 @@ public sealed class ReportQueryPerformanceTests(CrmWebFactory factory)
         probe.AssertBounded(1, 6);
     }
 
+    [Fact]
+    public async Task Operations_search_reads_only_the_requested_results_in_a_fixed_number_of_queries()
+    {
+        var marker = "PerfOps" + Guid.NewGuid().ToString("N")[..8];
+        await using var scope = factory.Services.CreateAsyncScope();
+        var services = scope.ServiceProvider;
+        var organizationId = await factory.ClientAs(Crm.Authorization.CrmRoles.Admin).CreateOrganizationAsync(new { name = $"{marker} Drift AS", status = "Customer" });
+        var api = services.GetRequiredService<IServiceApi>();
+        var now = DateTimeOffset.UtcNow;
+        await api.ReplaceDevicesAsync(organizationId, $"perf-{marker}", Enumerable.Range(0, 12).Select(i =>
+            new ExternalDevice($"{marker}-{i}", $"{marker}-PC{i:D2}", DeviceType.Workstation, null, true, now, null)).ToList(), Ct);
+        await api.ApplyAlertSnapshotAsync(new AlertSnapshot($"perf-{marker}", AlertKind.Monitoring, Enumerable.Range(0, 12).Select(i =>
+            new ExternalAlert($"{i}", organizationId, AlertSeverity.Warning, $"{marker} alert {i}", null, now.AddMinutes(-i))).ToList(),
+            Enumerable.Range(0, 12).Select(i => $"{i}").ToList(), IsComplete: true), Ct);
+        await api.UpsertTicketsAsync(Enumerable.Range(0, 12).Select(i => new ExternalTicket("atera", TestData.AteraId(), organizationId, null,
+            $"{marker} ticket {i}", "Open", null, null, null, null, null, null, null, null, now.AddHours(-i), null, null, null, null)).ToList(), Ct);
+        await services.GetRequiredService<Crm.Backup.Contracts.IBackupApi>().ApplySnapshotAsync(new Crm.Backup.Contracts.BackupSnapshot($"perf-{marker}",
+            new Dictionary<Guid, IReadOnlyList<Crm.Backup.Contracts.ExternalBackupAccount>>
+            {
+                [organizationId] = [new($"{marker}-account", $"{marker} Drift AS", null, "ACTIVE", "EU", [new($"{marker}-mail", Crm.Backup.Contracts.BackupService.Mail,
+                    "O365MAIL", null, "ACTIVE", false, now, null, 12, 12, null, Enumerable.Range(0, 12).Select(i => new Crm.Backup.Contracts.ExternalBackupEntity(
+                        $"{marker}-{i}", $"user{i:D2}@{marker}.example", $"{marker} User {i:D2}", null, "ACTIVE", false, now, null, null, null, null, null)).ToList())])],
+            }, true), Ct);
+
+        // The words of a search and the customers' names are the Customers module's reads; the probe counts each provider's own.
+        var words = services.GetRequiredService<Crm.Customers.Contracts.ICustomerSearchWords>();
+        var customers = services.GetRequiredService<ICustomersApi>();
+        var term = SearchTerm.Parse(marker)!;
+        var probe = new QueryProbe();
+        await using var service = new ServiceDbContext(new DbContextOptionsBuilder<ServiceDbContext>()
+            .UseSqlServer(factory.RuntimeConnectionString).AddInterceptors(probe).Options);
+        (await new Crm.Service.Features.Search.DeviceSearchProvider(service, words, customers).SearchAsync(term, 5, Ct)).Count.ShouldBe(5);
+        probe.AssertBounded(2, 12); // the machines, then the agents of those five
+        probe.Clear();
+        (await new Crm.Service.Features.Search.AlertSearchProvider(service, words, customers, TimeProvider.System).SearchAsync(term, 5, Ct)).Count.ShouldBe(5);
+        probe.AssertBounded(1, 6);
+        probe.Clear();
+        (await new Crm.Service.Features.Search.TicketSearchProvider(service, words, customers).SearchAsync(term, 5, Ct)).Count.ShouldBe(5);
+        probe.AssertBounded(1, 6);
+        probe.Clear();
+        await using var backup = new Crm.Backup.Persistence.BackupDbContext(new DbContextOptionsBuilder<Crm.Backup.Persistence.BackupDbContext>()
+            .UseSqlServer(factory.RuntimeConnectionString).AddInterceptors(probe).Options);
+        (await new Crm.Backup.Features.BackupSearchProvider(backup, words, customers).SearchAsync(term, 5, Ct)).Count.ShouldBe(5);
+        probe.AssertBounded(1, 6);
+    }
+
     private sealed class QueryProbe : DbCommandInterceptor
     {
         private readonly List<int> _reads = [];

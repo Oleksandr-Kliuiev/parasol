@@ -74,7 +74,8 @@ function PickerBody({ group = 'organizations', initialSearch, onPick, onClose }:
     enabled: term.length >= 2,
     // While another search is read, the hits of the previous one stay, so the Link button under the pointer still takes the click.
     placeholderData: keepPreviousData,
-    queryFn: async ({ signal }) => (await api.get<SearchResponse>(`/api/v1/search${query({ q: term, take: 10 })}`, signal)).data,
+    // Only its own group is searched: the other groups (devices, tickets, backups…) would be read for nothing.
+    queryFn: async ({ signal }) => (await api.get<SearchResponse>(`/api/v1/search${query({ q: term, take: 10, groups: group })}`, signal)).data,
   });
   // Under two letters nothing is searched, and no hits of an earlier search stay under the hint.
   const organizations = term.length >= 2 ? (data?.groups.find((g) => g.group === group)?.items ?? []) : [];

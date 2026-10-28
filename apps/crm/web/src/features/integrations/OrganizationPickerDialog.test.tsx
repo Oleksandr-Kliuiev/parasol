@@ -21,6 +21,8 @@ describe('the organization picker of the mappings', () => {
     renderRoutes([page(<OrganizationPickerDialog open initialSearch="Fjord IT" onPick={onPick} onClose={() => {}} />)], '/', testUser(['integrations.manage']));
     const item = (await screen.findByText('Fjord IT AS')).closest('li')!;
     const search = screen.getByRole('searchbox', { name: 'Search organizations' });
+    // The picker asks for its own group only: devices, tickets and backups are not searched for it.
+    expect(String(fetch.mock.calls[0]![0])).toBe('/api/v1/search?q=Fjord+IT&take=10&groups=organizations');
 
     fireEvent.change(search, { target: { value: 'Fjord' } });
     await requested();

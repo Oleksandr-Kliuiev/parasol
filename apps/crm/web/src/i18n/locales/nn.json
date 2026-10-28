@@ -56,7 +56,7 @@
     "tickets": "Saker"
   },
   "header": {
-    "search": "Søk i organisasjonar",
+    "search": "Søk i kundar, einingar og meir",
     "language": "Språk",
     "signOut": "Logg ut",
     "devMode": "Utviklarpålogging",
@@ -733,12 +733,28 @@
       "commands": "Gå til",
       "organizations": "Organisasjonar",
       "contacts": "Kontaktar",
+      "devices": "Einingar",
+      "alerts": "Driftsvarsel",
+      "tickets": "Saker",
+      "backup": "Tryggingskopi",
       "products": "Produkt"
     },
     "noResults": "Ingen treff.",
-    "enterHint": "↑↓ for å flytte · Enter for å opne · Enter utan val søkjer i organisasjonar",
+    "scope": "Søkte i {{areas}}.",
+    "openAlerts": "opne driftsvarsel",
+    "failed": "Søket feila.",
+    "jumpLabel": "Grupper med treff",
+    "enterHint": "↑↓ for å flytte · PgUp PgDn mellom grupper · Enter for å opne",
     "found_one": "{{count}} treff",
-    "found_other": "{{count}} treff"
+    "found_other": "{{count}} treff",
+    "more": "Fleire enn {{count}} – skriv meir for å snevre inn",
+    "moreOfCustomer": "Fleire enn {{count}} – legg til eit ord, til dømes kundenamnet",
+    "matched": {
+      "serial": "Serienummer: {{value}}",
+      "loggedIn": "Pålogga ved lesinga: {{value}}",
+      "lastLogin": "Sist pålogga: {{value}}",
+      "alias": "Også kalla {{value}}"
+    }
   },
   "duplicates": {
     "strongestShown": "Dei {{shown}} sterkaste av {{total}} moglege duplikat blir viste; når du slår saman eller avviser, kjem dei neste.",
