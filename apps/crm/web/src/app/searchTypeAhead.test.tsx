@@ -69,7 +69,7 @@ describe('GlobalSearch in the palette', () => {
     const take = vi.fn().mockReturnValueOnce('solveig').mockReturnValue('');
     const { unmount } = renderRoutes([{ path: '*', element: <GlobalSearch inline typeAhead={{ take, release }} /> }], '/');
 
-    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search organizations' })).toHaveValue('solveig'));
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Search customers, devices and more' })).toHaveValue('solveig'));
     expect(await screen.findByRole('option', { name: /Solveig Berg/ })).toBeInTheDocument();
     unmount();
     expect(release).toHaveBeenCalled();

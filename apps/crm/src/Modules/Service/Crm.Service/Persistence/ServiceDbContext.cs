@@ -61,6 +61,8 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             // The cross-customer ticket list (M39.2): open first, newest first, and a person's own tickets.
             b.HasIndex(x => new { x.IsOpen, x.CreatedAtSource });
             b.HasIndex(x => new { x.TechnicianUserId, x.IsOpen }).HasFilter("[TechnicianUserId] IS NOT NULL");
+            // A ticket by its number alone, whatever its desk (global search and the tickets page's search).
+            b.HasIndex(x => x.ExternalId);
         });
 
         modelBuilder.Entity<TicketComment>(b =>
@@ -118,7 +120,10 @@ public sealed class ServiceDbContext(DbContextOptions<ServiceDbContext> options)
             b.HasIndex(x => new { x.OrganizationId, x.RemovedAt });
             // M40: a machine is its devices; it is removed only once no device names it.
             b.HasOne<Machine>().WithMany().HasForeignKey(x => x.MachineId).OnDelete(DeleteBehavior.Restrict);
-            b.HasIndex(x => x.MachineId).HasFilter("[MachineId] IS NOT NULL");
+            // Global search looks for a word in what a machine's agents reported; carrying those columns keeps it to this narrow index
+            // instead of the wide rows.
+            b.HasIndex(x => x.MachineId).HasFilter("[MachineId] IS NOT NULL")
+                .IncludeProperties(x => new { x.MachineName, x.SerialNumber, x.LastLoginUser, x.LoggedInUsers });
         });
 
         modelBuilder.Entity<DevicePatch>(b =>

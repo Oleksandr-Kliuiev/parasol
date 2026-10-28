@@ -91,6 +91,10 @@ public static class ServiceModule
         services.AddScoped<MachineQueries>();
         services.AddScoped<MachineDecisions>();
         services.AddScoped<AlertHiding>();
+        // Global search reaches the operations records: devices, alerts and saved tickets, read with the rights of the Drift area.
+        services.AddScoped<ISearchProvider, Features.Search.DeviceSearchProvider>();
+        services.AddScoped<ISearchProvider, Features.Search.AlertSearchProvider>();
+        services.AddScoped<ISearchProvider, Features.Search.TicketSearchProvider>();
         // M40: the CRM's own coverage rules, checked after a complete read of their source, and their settings.
         services.AddScoped<ICoverageRule, Features.Coverage.AteraAgentSilentRule>();
         // M41: Atera and Huntress compared, and what Huntress says about its agents and Defender.

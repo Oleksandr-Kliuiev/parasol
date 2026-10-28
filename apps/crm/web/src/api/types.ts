@@ -249,11 +249,14 @@ export interface SearchHit {
   title: string;
   subtitle: string | null;
   url: string;
+  /** What the interface words itself (operations records): a device's type, a ticket's status, an alert's severity and rule. */
+  facts?: Record<string, string> | null;
 }
 
 export interface SearchResponse {
   query: string;
-  groups: Array<{ group: string; items: SearchHit[] }>;
+  /** `more`: the group found more than it shows; more words narrow it. */
+  groups: Array<{ group: string; items: SearchHit[]; more?: boolean }>;
 }
 
 export type DuplicateReason = 'SameName' | 'SharedDomain' | 'SameEmailDomain' | 'SamePhone';

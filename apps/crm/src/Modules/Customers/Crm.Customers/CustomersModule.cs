@@ -39,6 +39,8 @@ public static class CustomersModule
         services.AddScoped<IOrganizationWorkLease, OrganizationWorkLease>();
         services.AddScoped<ISearchProvider, OrganizationSearchProvider>();
         services.AddScoped<ISearchProvider, ContactSearchProvider>();
+        // Global search: a word naming a customer narrows the records other modules find for it ("dc01 fjord").
+        services.AddScoped<ICustomerSearchWords, CustomerSearchWords>();
         // DEV-11: the contact person in subject requests and the retention of former customers' contacts.
         services.AddScoped<IDataSubjectResolver, ContactSubjectResolver>();
         services.AddScoped<IPersonalDataContributor, CustomersPersonalData>();

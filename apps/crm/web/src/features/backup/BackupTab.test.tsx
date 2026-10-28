@@ -108,6 +108,26 @@ describe('The Sikkerhetskopi tab (M42)', () => {
     expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
   });
 
+  it('opens narrowed to the person a search hit named, with their list in view, and keeps its own search in the address', async () => {
+    const fetch = stub();
+    const scrolled = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');
+    const user = userEvent.setup();
+    const { router } = renderRoutes([page(<BackupTab organizationId="o1" />)], '/?tab=backup&search=kari%40fjord.test', testUser(['service.read']));
+
+    const box = await screen.findByRole('searchbox', { name: 'Search name or address' });
+    expect(box).toHaveValue('kari@fjord.test');
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Users and sites' })).toHaveFocus());
+    expect(scrolled).toHaveBeenCalledWith({ block: 'start' });
+    const reads = () => fetch.mock.calls.map(([url]) => String(url)).filter((url) => url.startsWith('/api/v1/backup/organizations/o1/entities'));
+    expect(reads().length).toBeGreaterThan(0);
+    expect(reads().every((url) => url.includes('q=kari%40fjord.test')), 'never the whole list first').toBe(true);
+
+    await user.clear(box);
+    await user.type(box, 'ola');
+    await waitFor(() => expect(router.state.location.search).toBe('?tab=backup&search=ola'));
+    scrolled.mockRestore();
+  });
+
   it('says when Partner Center has no licence data, when a linked account was not read yet, and when none is linked', async () => {
     stub(overview({ licences: { state: 'NoData', licensed: null, backedUp: 2, missing: null, readOn: null } }));
     const first = render();

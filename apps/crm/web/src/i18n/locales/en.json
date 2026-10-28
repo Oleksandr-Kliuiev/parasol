@@ -56,7 +56,7 @@
     "tickets": "Tickets"
   },
   "header": {
-    "search": "Search organizations",
+    "search": "Search customers, devices and more",
     "language": "Language",
     "signOut": "Sign out",
     "devMode": "Development sign-in",
@@ -733,12 +733,28 @@
       "commands": "Go to",
       "organizations": "Organizations",
       "contacts": "Contacts",
+      "devices": "Devices",
+      "alerts": "Alerts",
+      "tickets": "Tickets",
+      "backup": "Backup",
       "products": "Products"
     },
     "noResults": "Nothing found.",
-    "enterHint": "↑↓ to move · Enter to open · Enter without selection searches organizations",
+    "scope": "Searched in {{areas}}.",
+    "openAlerts": "open alerts",
+    "failed": "The search failed.",
+    "jumpLabel": "Groups with hits",
+    "enterHint": "↑↓ to move · PgUp PgDn between groups · Enter to open",
     "found_one": "{{count}} result",
-    "found_other": "{{count}} results"
+    "found_other": "{{count}} results",
+    "more": "More than {{count}} – type more to narrow down",
+    "moreOfCustomer": "More than {{count}} – add a word, such as the customer’s name",
+    "matched": {
+      "serial": "Serial number: {{value}}",
+      "loggedIn": "Logged in at the read: {{value}}",
+      "lastLogin": "Last logged in: {{value}}",
+      "alias": "Also called {{value}}"
+    }
   },
   "duplicates": {
     "strongestShown": "The {{shown}} strongest of {{total}} possible duplicates are listed; merging or dismissing brings up the next.",
