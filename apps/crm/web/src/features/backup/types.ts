@@ -57,9 +57,12 @@ export interface BackupTask {
   problems: number;
 }
 
-/** The licence check: NoAccount (no CloudAlly account), NoData (Partner Center has no reading) or Checked. */
+/**
+ * The licence check: NoAccount (no CloudAlly account), Checked (Partner Center's reading), Marked (no reading, so the mailboxes
+ * CloudAlly itself marks as licensed) or NoData (neither).
+ */
 export interface BackupLicences {
-  state: 'NoAccount' | 'NoData' | 'Checked';
+  state: 'NoAccount' | 'NoData' | 'Checked' | 'Marked';
   licensed: number | null;
   backedUp: number;
   missing: number | null;

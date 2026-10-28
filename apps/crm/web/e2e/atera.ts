@@ -59,7 +59,7 @@ export async function linkedAteraCustomer(page: Page, prefix: string): Promise<A
 export const ateraAgent = (page: Page, customer: AteraCustomer, fields: Record<string, unknown>) =>
   controlPost<{ AgentID: string; MachineName: string }>(page, 'agents', { CustomerID: customer.customerId, ...fields });
 
-/** An open alert in Atera; `hoursAgo` dates it, so the queue's oldest-first order can be checked. */
+/** An open alert in Atera; `hoursAgo` dates it, so the queue's newest-first order can be checked. */
 export const ateraAlert = (page: Page, customer: AteraCustomer, fields: { Title: string; Severity?: 'Critical' | 'Warning'; DeviceName?: string; hoursAgo?: number }) =>
   controlPost<AteraAlert>(page, 'alerts', {
     CustomerID: customer.customerId, Title: fields.Title, Severity: fields.Severity ?? 'Critical', DeviceName: fields.DeviceName,

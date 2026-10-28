@@ -2,8 +2,8 @@ import { expect, test, type Locator } from '@playwright/test';
 import { ateraAlert, closeAteraAlert, fitsWidth, linkedAteraCustomer, settled, storedAlerts, syncAlerts, syncAtera } from './atera';
 import { searchList, signIn } from './support';
 
-// M38: Work → Alerts lists the open alerts of every customer, critical first and the longest waiting first, with filters, honest
-// totals and each alert's side panel. The e2e database is shared, so the list is narrowed by this test's marker first.
+// M38: Work → Alerts lists the open alerts of every customer, critical first and the newest first, with filters, honest totals and
+// each alert's side panel. The e2e database is shared, so the list is narrowed by this test's marker first.
 test('the alert queue orders, filters and resolves alerts across customers', { tag: '@critical' }, async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   await signIn(page, 'Crm.Admin');
@@ -27,26 +27,36 @@ test('the alert queue orders, filters and resolves alerts across customers', { t
   await narrow();
   const table = page.getByRole('table', { name: 'Alerts' });
   const rows = table.getByRole('row').filter({ hasText: m });
-  // Critical first, the longest waiting first within a severity, across customers.
-  await expect(rows).toHaveText([new RegExp(`Critical.*${m} disk almost full.*${first.name}`), new RegExp(`Critical.*${m} firewall down.*${second.name}`),
+  // Critical first, the newest first within a severity, across customers.
+  await expect(rows).toHaveText([new RegExp(`Critical.*${m} firewall down.*${second.name}`), new RegExp(`Critical.*${m} disk almost full.*${first.name}`),
     new RegExp(`Warning.*${m} backup is late.*${first.name}`)]);
   await expect(rows.first()).toContainText('Source: Atera');
   // A title that opens the alert looks like the link it is: the tone of the customer link beside it, not plain text until hovered.
   // Polled as one comparison: a row drawn again between two reads gives no style for the node it replaced.
+  const disk = rows.filter({ hasText: `${m} disk almost full` });
   const tone = (element: Locator) => element.evaluate((el) => getComputedStyle(el).color);
   await expect.poll(async () => {
-    const title = await tone(rows.first().getByRole('button', { name: `${m} disk almost full`, exact: true }));
-    return title !== '' && title === await tone(rows.first().getByRole('link', { name: first.name, exact: true }));
+    const title = await tone(disk.getByRole('button', { name: `${m} disk almost full`, exact: true }));
+    return title !== '' && title === await tone(disk.getByRole('link', { name: first.name, exact: true }));
   }, { message: 'The alert title has the tone of the customer link beside it' }).toBe(true);
   await expect(page.getByRole('status').filter({ hasText: /alerts:/ })).toHaveText('3 alerts: 2 critical, 1 warnings');
   // How fresh the stored alerts are, under the page title (a read another spec held with a pause says it did not finish).
   await expect(page.getByRole('main').getByText(/^Atera:? (the )?read at /)).toBeVisible();
-  await expect(rows.first().getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();
+  await expect(disk.getByRole('button', { name: `Assign ${m} disk almost full`, exact: true })).toBeVisible();
 
   await page.getByRole('group', { name: 'Severity' }).getByRole('button', { name: /^Warning/ }).click();
   await expect(page).toHaveURL(/severity=warning/);
   await expect(rows).toHaveText([new RegExp(`${m} backup is late`)]);
   await page.getByRole('group', { name: 'Severity' }).getByRole('button', { name: 'All severities' }).click();
+  // What is new: the last 24 hours leave out the warning raised two days ago; any age brings it back.
+  await page.getByRole('combobox', { name: 'Age' }).click();
+  await page.getByRole('option', { name: 'Last 24 hours', exact: true }).click();
+  await expect(page).toHaveURL(/newerThan=1/);
+  await expect(rows).toHaveText([new RegExp(`${m} firewall down`), new RegExp(`${m} disk almost full`)]);
+  await page.getByRole('combobox', { name: 'Age' }).click();
+  await page.getByRole('option', { name: 'Any age', exact: true }).click();
+  await expect(page).not.toHaveURL(/newerThan=/);
+  await expect(rows).toHaveCount(3);
   await page.getByRole('combobox', { name: 'Customer' }).pressSequentially(second.name);
   await page.getByRole('option', { name: second.name }).click();
   await expect(page).toHaveURL(new RegExp(`customer=${second.organizationId}`));

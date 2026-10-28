@@ -28,7 +28,7 @@ const useStyles = makeStyles({
 });
 
 /**
- * The open alerts to look at first, across customers (M38): the most severe, and among them the oldest. Each row opens the
+ * The open alerts to look at first, across customers (M38): the most severe, and among them the newest. Each row opens the
  * alert in the queue and says who has its task, or hands it over here with Assign (M40), in the dialog the queue uses; the
  * header says how fresh the CRM's copy is, never more than the read proved.
  */

@@ -281,6 +281,7 @@ internal sealed class AteraAgentMissingRule(ServiceDbContext db) : ICoverageRule
 /// <summary>
 /// A Huntress agent that has not called back for longer than the limit (M41, 7 days unless a person sets another): the computer is
 /// not watched for threats. Only agents that called back once count. A silent server is critical, any other computer a warning.
+/// The gap began when the silence passed the limit: the last call-back plus the limit.
 /// </summary>
 internal sealed class HuntressAgentSilentRule(ServiceDbContext db) : ICoverageRule
 {
@@ -293,7 +294,8 @@ internal sealed class HuntressAgentSilentRule(ServiceDbContext db) : ICoverageRu
 
     public async Task<IReadOnlyList<CoverageFinding>> FindAsync(CoverageCheck check, CancellationToken cancellationToken)
     {
-        var silentSince = check.Now.AddDays(-(check.Threshold ?? Threshold!.Default));
+        var days = check.Threshold ?? Threshold!.Default;
+        var silentSince = check.Now.AddDays(-days);
         var devices = await CoverageDevices.ReadAsync(db, check.Organizations, [HuntressCoverage.Huntress], cancellationToken);
         return devices.Where(d => d.LastSeenAt is { } seen && seen < silentSince).Select(d => new CoverageFinding(
             d.Id.ToString("N"),
@@ -307,7 +309,8 @@ internal sealed class HuntressAgentSilentRule(ServiceDbContext db) : ICoverageRu
             {
                 ["device"] = d.MachineName,
                 ["lastSeenAt"] = d.LastSeenAt!.Value.ToString("O", CultureInfo.InvariantCulture),
-            })).ToList();
+            },
+            d.LastSeenAt!.Value.AddDays(days))).ToList();
     }
 }
 

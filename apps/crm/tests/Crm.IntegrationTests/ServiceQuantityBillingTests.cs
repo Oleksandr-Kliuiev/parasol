@@ -46,8 +46,10 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         // Two Huntress organizations of one customer add up; a day after the period is never what the period bills.
         await AgentsAsync(counted.OrganizationId, PeriodEnd.AddDays(-1), (TestData.AteraId(), 7), (TestData.AteraId(), 5));
         await AgentsAsync(counted.OrganizationId, PeriodEnd.AddDays(1), (TestData.AteraId(), 99));
-        // A person is billed once per account however many services back them up; accounts add up.
-        await SeatsAsync(counted.OrganizationId, PeriodEnd, ("acc-c1", "MS365", 9), ("acc-c1", "ONEDRIVE", 8), ("acc-c2", "MS365", 2));
+        // A person is billed once per account however many services back them up; accounts add up. The second account is billed
+        // per user, as CloudAlly words such a line: no seats, the users in accounts.
+        await SeatsAsync(counted.OrganizationId, PeriodEnd, ("acc-c1", "MS365", 9), ("acc-c1", "ONEDRIVE", 8));
+        await PerUserAsync(counted.OrganizationId, PeriodEnd, ("acc-c2", "MS365", 2));
         await AgentsAsync(stale.OrganizationId, PeriodEnd.AddDays(-10), (TestData.AteraId(), 4));
         await SeatsAsync(stale.OrganizationId, PeriodEnd.AddDays(-10), ("acc-s1", "MS365", 6));
         var before = await SignalAsync();
@@ -89,7 +91,7 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo")).DateTime);
         var customer = await CustomerAsync(admin, agents, null, "Q", today.AddDays(-40), null);
         await AgentsAsync(customer.OrganizationId, today, (TestData.AteraId(), 21));
-        await SeatsAsync(customer.OrganizationId, today.AddDays(-5), ("acc-q1", "MS365", 14));
+        await PerUserAsync(customer.OrganizationId, today.AddDays(-5), ("acc-q1", "MS365", 14));
 
         var card = await admin.GetFromJsonAsync<JsonElement>($"{Billing}/organizations/{customer.OrganizationId}/service-quantities", Ct);
         var services = card.GetProperty("services").EnumerateArray().ToDictionary(s => s.GetProperty("model").GetString()!);
@@ -109,7 +111,8 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         var asSales = await sales.GetFromJsonAsync<JsonElement>($"{Billing}/organizations/{customer.OrganizationId}/service-quantities", Ct);
         var bill = asSales.GetProperty("services").EnumerateArray().Single(s => s.GetProperty("model").GetString() == "PerBackupSeat")
             .GetProperty("billLines").EnumerateArray().ShouldHaveSingleItem();
-        bill.GetProperty("seats").GetInt32().ShouldBe(14);
+        // CloudAlly's zero seats are no count: the line bills its 14 accounts, as the count above it does.
+        (bill.GetProperty("seats").GetInt32(), bill.GetProperty("accounts").GetInt32(), bill.GetProperty("users").GetInt32()).ShouldBe((0, 14, 14));
         bill.TryGetProperty("price", out _).ShouldBeFalse();
         bill.TryGetProperty("total", out _).ShouldBeFalse();
         (await factory.ClientAs(CrmRoles.Technician, "quantities-tech").GetAsync($"{Billing}/organizations/{customer.OrganizationId}/service-quantities", Ct))
@@ -160,6 +163,15 @@ public sealed class ServiceQuantityBillingTests(CrmWebFactory factory)
         factory.RunJobAsync<IBackupApi>(api => api.ApplyBillsAsync(BackupSources.CloudAlly, day,
             [.. lines.Select(l => new ExternalBackupBillLine(l.Account, organizationId, "BACKUP", l.Source, l.Source == "MS365" ? "Exchange" : "OneDrive", l.Seats,
                 l.Seats, 2.5m, 2.5m * l.Seats, "EUR", "MONTHLY", null))], Ct));
+
+    /// <summary>
+    /// The day's lines of accounts billed per user, as CloudAlly's live bill words them: <c>seat</c> 0 and the users in <c>accounts</c>,
+    /// the total being accounts times price.
+    /// </summary>
+    private Task PerUserAsync(Guid organizationId, DateOnly day, params (string Account, string Source, int Users)[] lines) =>
+        factory.RunJobAsync<IBackupApi>(api => api.ApplyBillsAsync(BackupSources.CloudAlly, day,
+            [.. lines.Select(l => new ExternalBackupBillLine(l.Account, organizationId, "BACKUP", l.Source, l.Source == "MS365" ? "Exchange" : "OneDrive", l.Users,
+                0, 2.5m, 2.5m * l.Users, "EUR", "MONTHLY", null))], Ct));
 
     /// <summary>The customers of the run whose basis carries a code of an estimated quantity, the way the signal reads them.</summary>
     private async Task<List<Guid>> EstimatedBasesAsync(Guid runId)

@@ -9,7 +9,7 @@ namespace Crm.Service.Features.Coverage;
 /// An Atera agent that has not reported for longer than the limit (M40, 7 days unless a person sets another): the computer it
 /// watches is not watched. Only current agents of the organizations the read covered count, and only those that reported once:
 /// an agent without a last contact says nothing about how long it has been silent. A silent server is critical, any other
-/// computer a warning.
+/// computer a warning. The gap began when the silence passed the limit: the last contact plus the limit.
 /// </summary>
 internal sealed class AteraAgentSilentRule(ServiceDbContext db) : ICoverageRule
 {
@@ -25,7 +25,8 @@ internal sealed class AteraAgentSilentRule(ServiceDbContext db) : ICoverageRule
 
     public async Task<IReadOnlyList<CoverageFinding>> FindAsync(CoverageCheck check, CancellationToken cancellationToken)
     {
-        var silentSince = check.Now.AddDays(-(check.Threshold ?? Threshold!.Default));
+        var days = check.Threshold ?? Threshold!.Default;
+        var silentSince = check.Now.AddDays(-days);
         var organizations = check.Organizations.Distinct().ToList();
         if (organizations.Count == 0)
         {
@@ -50,6 +51,7 @@ internal sealed class AteraAgentSilentRule(ServiceDbContext db) : ICoverageRule
             {
                 ["device"] = d.MachineName,
                 ["lastSeenAt"] = d.LastSeenAt.ToString("O", CultureInfo.InvariantCulture),
-            })).ToList();
+            },
+            d.LastSeenAt.AddDays(days))).ToList();
     }
 }

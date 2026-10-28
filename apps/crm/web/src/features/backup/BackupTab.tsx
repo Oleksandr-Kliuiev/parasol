@@ -170,13 +170,21 @@ function NoAccount() {
 
 /**
  * The check of licensed users: how many of the customer's users hold a Microsoft 365 licence with a mailbox (Partner Center) and how
- * many mailboxes are in the backup — or, without a licence reading, that nothing can be said.
+ * many mailboxes are in the backup; without a licence reading, the mailboxes CloudAlly itself marks as licensed; without either,
+ * that nothing can be said.
  */
 function Licences({ licences }: { licences: BackupLicences }) {
   const { t } = useTranslation();
   if (licences.state === 'NoAccount') return null;
   if (licences.state === 'NoData') {
     return <MessageBar intent="info"><MessageBarBody>{t('backup.licences.noData')}</MessageBarBody></MessageBar>;
+  }
+
+  if (licences.state === 'Marked') {
+    const marked = { licensed: licences.licensed ?? 0, backedUp: licences.backedUp, missing: licences.missing ?? 0 };
+    return marked.missing > 0
+      ? <MessageBar intent="warning"><MessageBarBody>{t('backup.licences.markedMissing', { ...marked, count: marked.missing })}</MessageBarBody></MessageBar>
+      : <MessageBar intent="success"><MessageBarBody>{t('backup.licences.markedAllIn', { ...marked, count: marked.licensed })}</MessageBarBody></MessageBar>;
   }
 
   const values = { licensed: licences.licensed ?? 0, backedUp: licences.backedUp, missing: licences.missing ?? 0, date: formatDate(licences.readOn) };

@@ -13,6 +13,8 @@ export interface AlertQueueFilters {
   system: string | null;
   /** M45: only alerts their source raised more than this many days ago. */
   olderThanDays: number | null;
+  /** Only alerts their source raised within this many days: what is new. */
+  newerThanDays: number | null;
 }
 
 /** The queue's filters as the API takes them: the list, its counts and "all that match" (M45) read the same filter. */
@@ -24,14 +26,15 @@ export const queueParams = (filters: AlertQueueFilters) => ({
   q: filters.search || undefined,
   system: filters.system ?? undefined,
   olderThanDays: filters.olderThanDays ?? undefined,
+  newerThanDays: filters.newerThanDays ?? undefined,
 });
 
 /** One page of the queue holds what one task lookup may carry. */
 export const queuePageSize = 25;
 
 /**
- * Alerts across customers (M38): open ones critical first and the longest waiting first, resolved ones newest resolved first,
- * both in the server's order. The counts are of the whole filter, and the reads say how fresh the stored alerts are, both from the
+ * Alerts across customers (M38): open ones critical first and the newest first, resolved ones newest resolved first, both in the
+ * server's order. The counts are of the whole filter, and the reads say how fresh the stored alerts are, both from the
  * newest answer (DEV-12). A new search or filter is read with the previous rows kept in place, so a row someone is clicking does not
  * vanish while the answer is on its way.
  */

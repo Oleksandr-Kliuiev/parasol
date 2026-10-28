@@ -67,7 +67,9 @@ public sealed record CoverageCheck(DateTimeOffset Now, int? Threshold, IReadOnly
 /// <summary>
 /// One gap a rule found. <paramref name="Subject"/> is what it is about (a device id), unique within the rule. <paramref name="Facts"/>
 /// are plain values the interface words in the reader's language (times as ISO 8601 text); <paramref name="Title"/> is the English
-/// sentence kept for readers that do not know the rule.
+/// sentence kept for readers that do not know the rule. <paramref name="Since"/> is when the gap began as far as the source's own data
+/// tells (an agent's last contact plus the limit), so a gap a first check finds is dated by its cause and not by the check; null when
+/// the data does not tell, and the gap counts from when it was found.
 /// </summary>
 public sealed record CoverageFinding(
     string Subject,
@@ -76,7 +78,8 @@ public sealed record CoverageFinding(
     string Title,
     string? DeviceName,
     Guid? DeviceId,
-    IReadOnlyDictionary<string, string> Facts);
+    IReadOnlyDictionary<string, string> Facts,
+    DateTimeOffset? Since = null);
 
 /// <summary>What one check of a source's rules changed.</summary>
 public sealed record CoverageCheckResult(int Rules, int Found, int Opened, int Reopened, int Resolved)

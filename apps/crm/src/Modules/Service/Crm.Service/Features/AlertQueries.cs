@@ -55,7 +55,7 @@ public sealed record AlertPage(
 /// </summary>
 public sealed record AlertSourceRead(string System, DateTimeOffset? StartedAt, bool Complete, bool Late);
 
-/// <summary>The open alerts that waited longest at the highest severity, out of <c>TotalCount</c> open ones.</summary>
+/// <summary>The newest open alerts at the highest severity, out of <c>TotalCount</c> open ones.</summary>
 public sealed record UrgentAlerts(IReadOnlyList<AlertListItem> Items, int TotalCount, int Critical, int Warning, IReadOnlyList<AlertSourceRead> Reads);
 
 /// <summary>
@@ -63,7 +63,8 @@ public sealed record UrgentAlerts(IReadOnlyList<AlertListItem> Items, int TotalC
 /// selection a bulk action takes) read through this one filter, so the count a person sees before a bulk action is the count of
 /// what it takes. <paramref name="State"/> is open unless asked otherwise; <paramref name="Hidden"/> lists what is hidden in Parasoll
 /// now instead. <paramref name="System"/> is the source as stored (<c>atera</c>, <c>huntress</c>, <c>parasoll</c>);
-/// <paramref name="OlderThanDays"/> keeps the alerts their source raised more than that many days ago.
+/// <paramref name="OlderThanDays"/> keeps the alerts their source raised more than that many days ago, <paramref name="NewerThanDays"/>
+/// those it raised within that many days (what is new since yesterday or last week).
 /// </summary>
 public sealed record AlertFilter(
     Guid? OrganizationId = null,
@@ -73,7 +74,8 @@ public sealed record AlertFilter(
     Guid? DeviceId = null,
     string? Search = null,
     string? System = null,
-    int? OlderThanDays = null);
+    int? OlderThanDays = null,
+    int? NewerThanDays = null);
 
 /// <summary>
 /// One alert a bulk action may take (M45): what names it in a confirmation and tells it from a namesake (its title, or a gap's rule and
@@ -128,7 +130,7 @@ internal sealed class AlertQueries(
 
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
-    /// within a severity the oldest first; resolved ones newest resolved first. An open list leaves out what is hidden in Parasoll
+    /// within a severity the newest first; resolved ones newest resolved first. An open list leaves out what is hidden in Parasoll
     /// now (M40); a hidden list shows just those, in the open order. Filters narrow the totals as well as the page; the cursor
     /// carries every sort value, so a cursor of one order is refused by the other.
     /// </summary>
@@ -199,7 +201,7 @@ internal sealed class AlertQueries(
     private Result<IQueryable<Alert>> Filter(AlertFilter filter, DateTimeOffset now)
     {
         if ((filter.State is { } s && !Enum.IsDefined(s)) || (filter.Severity is { } v && !Enum.IsDefined(v)) || (filter.Hidden && filter.State == AlertState.Resolved) ||
-            (filter.System is { } named && !IsSystemName(named)) || filter.OlderThanDays is < 1 or > MaxAgeDays)
+            (filter.System is { } named && !IsSystemName(named)) || filter.OlderThanDays is < 1 or > MaxAgeDays || filter.NewerThanDays is < 1 or > MaxAgeDays)
         {
             return InvalidFilter;
         }
@@ -234,7 +236,7 @@ internal sealed class AlertQueries(
             alerts = alerts.Where(a => a.System == system);
         }
 
-        // The age the list shows: from when the source raised the alert (a gap: when this occurrence was found), and in the list of
+        // The age the list shows: from when the source raised the alert (a gap: when this occurrence began), and in the list of
         // resolved alerts from when it was resolved, as that list is ordered.
         if (filter.OlderThanDays is { } days)
         {
@@ -242,6 +244,14 @@ internal sealed class AlertQueries(
             alerts = IsResolvedList(filter)
                 ? alerts.Where(a => (a.ResolvedAt ?? a.CreatedAtSource) < before)
                 : alerts.Where(a => a.CreatedAtSource < before);
+        }
+
+        if (filter.NewerThanDays is { } recent)
+        {
+            var since = now.AddDays(-recent);
+            alerts = IsResolvedList(filter)
+                ? alerts.Where(a => (a.ResolvedAt ?? a.CreatedAtSource) >= since)
+                : alerts.Where(a => a.CreatedAtSource >= since);
         }
 
         return Result<IQueryable<Alert>>.Success(alerts);
@@ -260,7 +270,7 @@ internal sealed class AlertQueries(
     }
 
     /// <summary>
-    /// The open alerts to look at first: the most severe, and among those the oldest. The counts are of every open alert, so a
+    /// The open alerts to look at first: the most severe, and among those the newest. The counts are of every open alert, so a
     /// panel can say "5 of 40"; the reads say how fresh the list is.
     /// </summary>
     public async Task<UrgentAlerts> UrgentAsync(int? limit, CancellationToken ct)
@@ -364,11 +374,16 @@ internal sealed class AlertQueries(
 
 /// <summary>
 /// The two orders of an alert list (M38) with their keyset continuations, which mirror the order exactly. Open: severity rank (an
-/// enum stored as text sorts by a CASE rank, not by its spelling), then the source's time, then the id, all ascending. Resolved:
-/// the time it was resolved, then the id, both descending.
+/// enum stored as text sorts by a CASE rank, not by its spelling) ascending, then the source's time and the id descending, so the
+/// newest of the most severe lead: what came in since yesterday is seen before alerts nobody has looked at for years. Until
+/// 28.10.2026 the oldest led; a cursor of that order reads as no page of this one. Resolved: the time it was resolved, then the id,
+/// both descending.
 /// </summary>
 internal static class AlertOrder
 {
+    /// <summary>The mark of the open order's cursors, newest first; the order before had none.</summary>
+    private const char NewestFirst = 'n';
+
     public static IQueryable<Alert> Open(IQueryable<Alert> alerts, KeysetCursor? after)
     {
         if (after is not null && TryRead(after, resolved: false, out var key))
@@ -377,12 +392,12 @@ internal static class AlertOrder
             alerts = alerts.Where(a =>
                 (a.Severity == AlertSeverity.Critical ? 0 : a.Severity == AlertSeverity.Warning ? 1 : 2) > rank ||
                 ((a.Severity == AlertSeverity.Critical ? 0 : a.Severity == AlertSeverity.Warning ? 1 : 2) == rank &&
-                 (a.CreatedAtSource > created || (a.CreatedAtSource == created && a.Id.CompareTo(after.Id) > 0))));
+                 (a.CreatedAtSource < created || (a.CreatedAtSource == created && a.Id.CompareTo(after.Id) < 0))));
         }
 
         return alerts
             .OrderBy(a => a.Severity == AlertSeverity.Critical ? 0 : a.Severity == AlertSeverity.Warning ? 1 : 2)
-            .ThenBy(a => a.CreatedAtSource).ThenBy(a => a.Id);
+            .ThenByDescending(a => a.CreatedAtSource).ThenByDescending(a => a.Id);
     }
 
     /// <summary>A resolved alert always has its time; an older row without one falls back to the source's time.</summary>
@@ -400,7 +415,7 @@ internal static class AlertOrder
 
     public static KeysetCursor Cursor(Alert last, bool resolved) => resolved
         ? new KeysetCursor((last.ResolvedAt ?? last.CreatedAtSource).ToString("O", CultureInfo.InvariantCulture), last.Id)
-        : new KeysetCursor(Rank(last.Severity).ToString(CultureInfo.InvariantCulture), last.Id,
+        : new KeysetCursor(string.Create(CultureInfo.InvariantCulture, $"{NewestFirst}{Rank(last.Severity)}"), last.Id,
             last.CreatedAtSource.ToString("O", CultureInfo.InvariantCulture));
 
     /// <summary>Reads a cursor of one order; a cursor of the other order, or of another list, does not read.</summary>
@@ -418,12 +433,12 @@ internal static class AlertOrder
             return true;
         }
 
-        if (cursor.SortKey is not ("0" or "1" or "2") || !Time(cursor.Then, out var created))
+        if (cursor.SortKey is not ("n0" or "n1" or "n2") || !Time(cursor.Then, out var created))
         {
             return false;
         }
 
-        key = (cursor.SortKey[0] - '0', created);
+        key = (cursor.SortKey[1] - '0', created);
         return true;
     }
 

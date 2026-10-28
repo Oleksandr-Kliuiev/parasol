@@ -151,20 +151,27 @@ internal sealed class BackupPausedRule(BackupDbContext db) : BackupRule(db)
 
 /// <summary>
 /// Licensed users without a backup (M42): more of a customer's users hold a Microsoft 365 licence with a mailbox (Partner Center's
-/// reading in the Licensing module) than mailboxes are in the customer's mail backup. One warning per customer, with the counts. A
-/// customer without a licence reading is not checked — there is nothing to compare — and the backup tab says so; it is never a
-/// clean check of something nobody read.
+/// reading in the Licensing module) than mailboxes are in the customer's mail backup. A customer without a licence reading is
+/// checked by CloudAlly's own mark on each mailbox instead — mailboxes it marks as licensed that are not in the backup — so an
+/// installation without Partner Center still hears of a licensed user nobody added. One warning per customer, with the counts and,
+/// for CloudAlly's count, <c>by</c>. A customer with neither is not checked — there is nothing to compare — and the backup tab says
+/// so; it is never a clean check of something nobody read.
 /// </summary>
 internal sealed class LicensedUserNotBackedUpRule(BackupDbContext db, LicensedUsers licences) : BackupRule(db)
 {
     public const string RuleCode = "cloudally.user-not-backed-up";
 
+    /// <summary>The <c>by</c> fact of a gap CloudAlly's marks counted; a gap of Partner Center's count has none.</summary>
+    public const string ByCloudAlly = "cloudally";
+
     public override string Code => RuleCode;
 
     public override async Task<IReadOnlyList<CoverageFinding>> FindAsync(CoverageCheck check, CancellationToken cancellationToken)
     {
-        var counts = await licences.CountAsync(check.Organizations.Distinct().ToList(), cancellationToken);
-        return counts.Where(c => c.Value.Missing > 0).OrderBy(c => c.Key)
+        var organizations = check.Organizations.Distinct().ToList();
+        var counts = await licences.CountAsync(organizations, cancellationToken);
+        var marked = await licences.MarkedAsync(organizations.Where(o => !counts.ContainsKey(o)).ToList(), cancellationToken);
+        var byPartnerCenter = counts.Where(c => c.Value.Missing > 0)
             .Select(c => new CoverageFinding(
                 c.Key.ToString("N"), c.Key, AlertSeverity.Warning,
                 string.Create(CultureInfo.InvariantCulture,
@@ -176,7 +183,20 @@ internal sealed class LicensedUserNotBackedUpRule(BackupDbContext db, LicensedUs
                     ["backedUp"] = Number(c.Value.BackedUp),
                     ["missing"] = Number(c.Value.Missing),
                     ["readOn"] = c.Value.ReadOn.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-                }))
-            .ToList();
+                }));
+        var byCloudAlly = marked.Where(m => m.Value.Missing > 0)
+            .Select(m => new CoverageFinding(
+                m.Key.ToString("N"), m.Key, AlertSeverity.Warning,
+                string.Create(CultureInfo.InvariantCulture,
+                    $"{m.Value.Missing} mailboxes CloudAlly marks as licensed are not in the backup ({m.Value.Licensed} licensed, {m.Value.BackedUp} in backup)"),
+                null, null,
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["licensed"] = Number(m.Value.Licensed),
+                    ["backedUp"] = Number(m.Value.BackedUp),
+                    ["missing"] = Number(m.Value.Missing),
+                    ["by"] = ByCloudAlly,
+                }));
+        return byPartnerCenter.Concat(byCloudAlly).OrderBy(f => f.OrganizationId).ToList();
     }
 }

@@ -148,7 +148,7 @@ internal sealed class BackupApi(BackupDbContext db, TimeProvider time) : IBackup
         {
             var accounts = lines.Where(b => b.OrganizationId == l.OrganizationId && b.Day == l.Day)
                 .GroupBy(b => b.AccountExternalId, StringComparer.Ordinal)
-                .Select(g => g.Max(b => b.Seats ?? b.Accounts))
+                .Select(g => g.Max(b => BackupBillCounts.Users(b.Seats, b.Accounts)))
                 .ToList();
             return new SeatCountReading(accounts.Any(seats => seats is null) ? null : accounts.Sum(seats => seats!.Value), l.Day, accounts.Count);
         });

@@ -30,8 +30,12 @@ public sealed class CloudAllyCollection
     public const string Name = "cloudally";
 }
 
-/// <summary>One entity of a test's CloudAlly world: an address (or a site) with its backup's state.</summary>
-internal sealed record TestEntity(string Id, string Name, string? FullName, string Status, DateTimeOffset? Success, DateTimeOffset? Attempt, string? Error = null);
+/// <summary>
+/// One entity of a test's CloudAlly world: an address (or a site) with its backup's state. <c>Licensing</c> is Microsoft's licence as
+/// CloudAlly words it; an entity that is not in backup is listed among the statuses only with one, as the live account lists it.
+/// </summary>
+internal sealed record TestEntity(
+    string Id, string Name, string? FullName, string Status, DateTimeOffset? Success, DateTimeOffset? Attempt, string? Error = null, string? Licensing = null);
 
 /// <summary>One task of a test's CloudAlly world.</summary>
 internal sealed record TestTask(string Id, string AccountId, string Source, string Status, List<TestEntity> Entities);
@@ -113,9 +117,10 @@ internal sealed class CloudAllyHost(WebApplicationFactory<Program> host, WireMoc
     }
 
     public static TestEntity Entity(string name, string status = "ACTIVE", double? successHoursAgo = 2, double? attemptHoursAgo = null, string? error = null,
-        string? fullName = null) =>
+        string? fullName = null, string? licensing = null) =>
         new("ent-" + Guid.NewGuid().ToString("N")[..10], name, fullName, status, successHoursAgo is { } s ? DateTimeOffset.UtcNow.AddHours(-s) : null,
-            attemptHoursAgo is { } a ? DateTimeOffset.UtcNow.AddHours(-a) : successHoursAgo is { } same ? DateTimeOffset.UtcNow.AddHours(-same) : null, error);
+            attemptHoursAgo is { } a ? DateTimeOffset.UtcNow.AddHours(-a) : successHoursAgo is { } same ? DateTimeOffset.UtcNow.AddHours(-same) : null, error,
+            licensing);
 
     /// <summary>Puts the world on the stub: the lists, every task with its entities, and a failing statuses list when asked.</summary>
     public void Publish(bool statusesFail = false)
@@ -124,10 +129,10 @@ internal sealed class CloudAllyHost(WebApplicationFactory<Program> host, WireMoc
         On("GET", "/v2/resellers/accounts").RespondWith(JsonReply(new { page = 1, totalPages = 1, total = accounts.Count, data = accounts }));
         var tasks = Accounts.SelectMany(a => a.Tasks).Select(t => TaskView(t, entities: false)).ToList();
         On("GET", "/v2/resellers/accounts/backup-tasks").RespondWith(JsonReply(new { page = 1, totalPages = 1, total = tasks.Count, data = tasks }));
-        var statuses = Accounts.SelectMany(a => a.Tasks).SelectMany(t => t.Entities.Where(e => e.Status != "NOTACTIVE").Select(e => new
+        var statuses = Accounts.SelectMany(a => a.Tasks).SelectMany(t => t.Entities.Where(e => e.Status != "NOTACTIVE" || e.Licensing is not null).Select(e => new
         {
             userId = t.AccountId, taskId = t.Id, source = t.Source, entityName = e.Name, lastBackupDate = Compact(e.Success), lastBackupAttemptDate = Compact(e.Attempt),
-            size = 1024, msLicensing = "LICENSED",
+            size = 1024, msLicensing = e.Licensing ?? "LICENSED",
             backupStatus = new[] { new { subSource = "mail", status = e.Error is null ? "SUCCESS" : "FAILED", error = e.Error, errFAQLink = e.Error is null ? null : "https://support.cloudally.test/faq" } },
         })).ToList();
         On("GET", "/v2/resellers/accounts/backup-statuses").RespondWith(statusesFail

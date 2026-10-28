@@ -103,10 +103,22 @@ public sealed record ExternalBackupBillLine(
 
 /// <summary>
 /// The seats a backup source bills for one CRM customer on a day (M43): the bill lines of the last day read on or before the date asked.
-/// A person is billed once for every service of an account, so an account counts its largest line (seats, or accounts where the source
-/// gave no seats); the customer's accounts add up. <paramref name="Seats"/> is null when an account's lines carry no count at all.
+/// A person is billed once for every service of an account, so an account counts its largest line (the users it bills,
+/// <see cref="BackupBillCounts.Users"/>); the customer's accounts add up. <paramref name="Seats"/> is null when an account's lines
+/// carry no count at all.
 /// </summary>
 public sealed record SeatCountReading(int? Seats, DateOnly Day, int Accounts);
+
+/// <summary>How many users one bill line bills, the same for the billing basis and the contracts tab.</summary>
+public static class BackupBillCounts
+{
+    /// <summary>
+    /// The line's seats where its plan sells seats, else the accounts it bills. CloudAlly's per-user lines carry <c>seat</c> 0 and the
+    /// users in <c>accounts</c> (the line's total is accounts times price), so a seat count of zero is no count; null when the line
+    /// gives neither.
+    /// </summary>
+    public static int? Users(int? seats, int? accounts) => seats is > 0 ? seats : accounts ?? seats;
+}
 
 /// <summary>
 /// One stored bill line as the reconciliation shows it (M43), with the account's name where the backups of the account are stored;

@@ -29,7 +29,10 @@ public sealed record ServiceQuantityLine(
     Guid ContractId, string ContractNumber, Guid LineId, string ProductName, string? DeviceFilter, decimal Estimate, decimal Billed, DateOnly ValidFrom,
     DateOnly? ValidTo);
 
-/// <summary>One line of what CloudAlly bills the partner for the customer: cost data, so price and total only for finance.cost.read.</summary>
+/// <summary>
+/// One line of what CloudAlly bills the partner for the customer: cost data, so price and total only for finance.cost.read.
+/// <paramref name="Users"/> is how many users the line bills, as the billing basis counts them (<see cref="BackupBillCounts.Users"/>).
+/// </summary>
 public sealed record ServiceBillLine(
     DateOnly Day,
     string Account,
@@ -38,6 +41,7 @@ public sealed record ServiceBillLine(
     string Source,
     int? Seats,
     int? Accounts,
+    int? Users,
     [property: SensitiveData(Permissions.FinanceCostRead)] decimal? Price,
     [property: SensitiveData(Permissions.FinanceCostRead)] decimal? Total,
     string? Currency);
@@ -118,7 +122,8 @@ internal sealed class ServiceQuantityReader(
                     l.QuantityModel == QuantityModel.PerAteraDevice ? l.DeviceFilter.ToString() : null, l.Quantity,
                     quantities.QuantityOf(l, products.GetValueOrDefault(l.ProductId), []), l.LineValidFrom, l.LineValidTo))],
                 model == QuantityModel.PerBackupSeat
-                    ? [.. bills.Select(b => new ServiceBillLine(b.Day, b.AccountExternalId, b.AccountName, b.Service, b.Source, b.Seats, b.Accounts, b.Price, b.Total, b.Currency))]
+                    ? [.. bills.Select(b => new ServiceBillLine(b.Day, b.AccountExternalId, b.AccountName, b.Service, b.Source, b.Seats, b.Accounts,
+                        BackupBillCounts.Users(b.Seats, b.Accounts), b.Price, b.Total, b.Currency))]
                     : []));
         }
 

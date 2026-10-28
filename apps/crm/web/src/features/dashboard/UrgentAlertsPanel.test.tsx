@@ -27,7 +27,7 @@ describe('the urgent alerts of My day', () => {
     renderRoutes([page(<UrgentAlertsPanel />)], '/', testUser(['service.read']));
     const panel = await screen.findByRole('region', { name: 'Urgent alerts' });
     expect(await within(panel).findByText(`Atera read at ${formatReadAt('2026-10-21T06:30:00Z')}`)).toBeVisible();
-    expect(within(panel).getByText('2 of 7 open alerts, most severe and oldest first')).toBeVisible();
+    expect(within(panel).getByText('2 of 7 open alerts, most severe and newest first')).toBeVisible();
     const rows = within(panel).getAllByRole('listitem');
     expect(rows).toHaveLength(2);
     // The customer completes each link's name: alerts of one kind share a title (jsdom drops the space before the dot).

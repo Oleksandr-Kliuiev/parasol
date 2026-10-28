@@ -177,7 +177,10 @@ public sealed class Alert : Entity
 
     /// <summary>
     /// A check found the gap (again): its fields and facts follow the finding, the count of clean checks starts over, and a closed
-    /// gap opens again as a new occurrence. The source's time of a gap is when this occurrence was found, and stays while it lasts.
+    /// gap opens again as a new occurrence. The source's time of a gap is when this occurrence began: the finding's own time where its
+    /// data tells (never later than now, nor before the last occurrence closed), else when it was found. It stays while the gap lasts,
+    /// except that a finding dating it earlier moves it back: a gap found before its rule could tell when it began (an agent silent
+    /// for years, found by the first check after the CRM went live) would otherwise rank as new.
     /// The customer's id at the source is the id of the organization the gap was first found for, and stays: a task made from the
     /// gap names it, and still names the same gap after a merge moved the gap to another organization.
     /// </summary>
@@ -186,7 +189,10 @@ public sealed class Alert : Entity
 
     private AlertChange Found(AlertKind kind, CoverageFinding finding, string? facts, DateTimeOffset now, bool isNew)
     {
-        var since = State == AlertState.Resolved || LastSeenAt is null ? now : CreatedAtSource;
+        var began = finding.Since is { } cause && cause < now ? cause : now;
+        var since = State == AlertState.Resolved || LastSeenAt is null
+            ? ResolvedAt is { } closed && began < closed ? closed : began
+            : began < CreatedAtSource ? began : CreatedAtSource;
         var observed = Observe(kind, new ExternalAlert(
             ExternalId, finding.OrganizationId, finding.Severity, finding.Title, finding.DeviceName, since,
             ExternalCustomerId ?? finding.OrganizationId.ToString("N")), finding.DeviceId, now, isNew);

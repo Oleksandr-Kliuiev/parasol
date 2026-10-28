@@ -77,13 +77,13 @@ test('urgent alerts are reached from their key figure and their jump link, and c
 });
 
 // M40 (M38's deferred hand-over): an urgent alert is assigned from My day itself, in the dialog the queue uses, and its row then
-// says who has the task. The alert is a year old, so it is among the oldest critical ones the panel shows first.
+// says who has the task. The alert is raised now, so it is among the newest critical ones the panel shows first.
 test('an urgent alert is handed over from My day without going to the queue', { tag: '@critical' }, async ({ page }) => {
   test.setTimeout(240_000);
   await signIn(page, 'Crm.Admin');
   const customer = await linkedAteraCustomer(page, 'Day');
   const m = customer.marker;
-  await ateraAlert(page, customer, { Title: `${m} firewall down`, Severity: 'Critical', hoursAgo: 24 * 365 });
+  await ateraAlert(page, customer, { Title: `${m} firewall down`, Severity: 'Critical', hoursAgo: 0 });
   await syncAlerts(page, customer, 1);
   const me = await api.get<{ displayName: string }>(page, '/bff/user');
 

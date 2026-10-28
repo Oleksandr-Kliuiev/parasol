@@ -97,11 +97,12 @@ export function createCloudAlly({ base, run, send }) {
     return { page: number, totalPages, total: items.length, nextPageToken: tokens && number < totalPages ? `p${number + 1}` : null, data: items.slice((number - 1) * size, number * size) };
   }
 
+  // Every entity of a task, the ones not in backup too: the live account lists them with Microsoft's licence and no backup yet.
   const statuses = () => [...tasks.values()].filter((t) => accounts.get(t.userId)?.status !== 'DELETED').flatMap((t) => t.entities
-    .filter((e) => e.status !== 'NOTACTIVE')
     .map((e) => ({ userId: t.userId, taskId: t.id, source: t.source, entityName: e.entity, lastBackupDate: e.lastBackupDate, lastBackupAttemptDate: e.lastBackupAttemptDate,
       backupDuration: 60_000, size: 1_048_576, msLicensing: t.source === 'MS365' ? 'LICENSED' : 'NA',
-      backupStatus: [{ subSource: 'mail', status: e.error ? 'FAILED' : 'SUCCESS', error: e.error, errFAQLink: e.error ? 'https://support.cloudally.example.invalid/hc/mailbox-full' : null }] })));
+      backupStatus: e.status === 'NOTACTIVE' ? []
+        : [{ subSource: 'mail', status: e.error ? 'FAILED' : 'SUCCESS', error: e.error, errFAQLink: e.error ? 'https://support.cloudally.example.invalid/hc/mailbox-full' : null }] })));
 
   const bills = () => listed().map((a) => {
     const lines = a.tasks.map((tid) => tasks.get(tid)).map((t) => ({ price: 2.5, accounts: t.entities.filter((e) => e.status !== 'NOTACTIVE').length,

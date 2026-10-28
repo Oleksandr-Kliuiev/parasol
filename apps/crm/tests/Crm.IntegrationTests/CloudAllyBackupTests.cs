@@ -51,7 +51,11 @@ public sealed class CloudAllyBackupTests(CrmWebFactory factory)
         services["OneDrive"].GetProperty("ok").GetInt32().ShouldBe(1);
         services["SharePoint"].GetProperty("paused").GetInt32().ShouldBe(1);
         overview.GetProperty("tasks").EnumerateArray().Single(t => t.GetProperty("service").GetString() == "SharePoint").GetProperty("paused").GetBoolean().ShouldBeTrue();
-        overview.GetProperty("licences").GetProperty("state").GetString().ShouldBe("NoData", "Partner Center has no licence reading of the customer");
+        // Partner Center has no licence reading of the customer, so CloudAlly's own mark counts: Kari and Ola are licensed and in backup;
+        // Nina is not listed with a licence, so she counts neither way.
+        var licences = overview.GetProperty("licences");
+        (licences.GetProperty("state").GetString(), licences.GetProperty("licensed").GetInt32(), licences.GetProperty("backedUp").GetInt32(),
+            licences.GetProperty("missing").GetInt32()).ShouldBe(("Marked", 2, 2, 0));
 
         var problems = await EntitiesAsync(host, account, "state=problems");
         problems.Select(e => (e.GetProperty("name").GetString(), e.GetProperty("state").GetString()))
@@ -156,6 +160,43 @@ public sealed class CloudAllyBackupTests(CrmWebFactory factory)
         var facts = gap.GetProperty("facts");
         (facts.GetProperty("licensed").GetString(), facts.GetProperty("backedUp").GetString(), facts.GetProperty("missing").GetString(), facts.GetProperty("readOn").GetString())
             .ShouldBe(("3", "2", "1", today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+    }
+
+    [Fact]
+    public async Task Without_partner_center_the_mailboxes_cloudally_marks_as_licensed_and_not_in_backup_are_a_gap_of_cloudallys_count()
+    {
+        await using var host = Start(factory);
+        // Two licensed users nobody added, and a shared mailbox without a licence that is fine outside the backup.
+        var account = await host.LinkedAccountAsync("Merket",
+            ("MS365", "ACTIVE", [Entity("a@merket.test"), Entity("b@merket.test", status: "NOTACTIVE", successHoursAgo: null, licensing: "LICENSED"),
+                Entity("c@merket.test", status: "NOTACTIVE", successHoursAgo: null, licensing: "LICENSED"),
+                Entity("post@merket.test", status: "NOTACTIVE", successHoursAgo: null, licensing: "UNLICENSED")]));
+        host.Publish();
+
+        await host.SyncAsync();
+
+        var licences = (await OverviewAsync(host, account)).GetProperty("licences");
+        (licences.GetProperty("state").GetString(), licences.GetProperty("licensed").GetInt32(), licences.GetProperty("backedUp").GetInt32(),
+            licences.GetProperty("missing").GetInt32()).ShouldBe(("Marked", 3, 1, 2));
+        licences.GetProperty("readOn").ValueKind.ShouldBe(JsonValueKind.Null, "no Partner Center reading");
+        var gap = (await GapsAsync(host, account)).ShouldHaveSingleItem();
+        (gap.GetProperty("rule").GetString(), gap.GetProperty("severity").GetString()).ShouldBe(("cloudally.user-not-backed-up", "Warning"));
+        var facts = gap.GetProperty("facts");
+        (facts.GetProperty("licensed").GetString(), facts.GetProperty("backedUp").GetString(), facts.GetProperty("missing").GetString(), facts.GetProperty("by").GetString())
+            .ShouldBe(("3", "1", "2", "cloudally"));
+        facts.TryGetProperty("readOn", out _).ShouldBeFalse();
+        gap.GetProperty("title").GetString().ShouldBe("2 mailboxes CloudAlly marks as licensed are not in the backup (3 licensed, 1 in backup)");
+
+        // Both are added to the backup: the next clean read keeps the gap, the second closes it.
+        var mail = account.Tasks[0].Entities;
+        mail[1] = mail[1] with { Status = "ACTIVE", Success = DateTimeOffset.UtcNow.AddMinutes(-5), Attempt = DateTimeOffset.UtcNow.AddMinutes(-5) };
+        mail[2] = mail[2] with { Status = "ACTIVE", Success = DateTimeOffset.UtcNow.AddMinutes(-5), Attempt = DateTimeOffset.UtcNow.AddMinutes(-5) };
+        host.Publish();
+        await host.SyncAsync();
+        (await GapsAsync(host, account)).Count.ShouldBe(1, "one clean check does not close a gap");
+        await host.SyncAsync();
+        (await GapsAsync(host, account)).ShouldBeEmpty();
+        (await OverviewAsync(host, account)).GetProperty("licences").GetProperty("missing").GetInt32().ShouldBe(0);
     }
 
     [Fact]

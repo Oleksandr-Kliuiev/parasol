@@ -34,13 +34,19 @@ public sealed class AlertBulkTests(CrmWebFactory factory)
         await SnapshotAsync(other, organizationId, marker, ("elsewhere", 200, AlertSeverity.Critical));
 
         var bySource = await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&system={system}");
-        Titles(bySource).ShouldBe([$"{marker} quarter", $"{marker} week", $"{marker} year", $"{marker} today"], "critical first, then the oldest");
+        Titles(bySource).ShouldBe([$"{marker} week", $"{marker} quarter", $"{marker} today", $"{marker} year"], "critical first, then the newest");
         (bySource.GetProperty("totalCount").GetInt32(), bySource.GetProperty("critical").GetInt32(), bySource.GetProperty("warning").GetInt32())
             .ShouldBe((4, 2, 2));
 
         // Older than 90 days, across sources: the age counts from when the source raised the alert.
         Titles(await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&olderThanDays=90"))
-            .ShouldBe([$"{marker} elsewhere", $"{marker} quarter", $"{marker} year"]);
+            .ShouldBe([$"{marker} quarter", $"{marker} elsewhere", $"{marker} year"]);
+
+        // What is new: raised within the last 30 days, counted like any filter.
+        var recent = await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&newerThanDays=30");
+        Titles(recent).ShouldBe([$"{marker} week", $"{marker} today"]);
+        (recent.GetProperty("totalCount").GetInt32(), recent.GetProperty("critical").GetInt32(), recent.GetProperty("warning").GetInt32()).ShouldBe((2, 1, 1));
+        Titles(await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&newerThanDays=1")).ShouldBe([$"{marker} today"]);
 
         // Both together, a page at a time: the counts are of the whole filter, not of the page.
         var first = await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&system={system}&olderThanDays=30&limit=1");
@@ -50,7 +56,8 @@ public sealed class AlertBulkTests(CrmWebFactory factory)
         Titles(await PageAsync(admin, $"{Alerts}?organizationId={organizationId}&system={system}&olderThanDays=30&limit=1&cursor={cursor}"))
             .ShouldBe([$"{marker} year"]);
 
-        foreach (var invalid in (string[])["olderThanDays=0", "olderThanDays=3651", "system=atera%20alerts", $"system={new string('a', 65)}"])
+        foreach (var invalid in (string[])["olderThanDays=0", "olderThanDays=3651", "newerThanDays=0", "newerThanDays=3651", "system=atera%20alerts",
+                     $"system={new string('a', 65)}"])
         {
             var response = await admin.GetAsync($"{Alerts}?{invalid}", Ct);
             response.StatusCode.ShouldBe(HttpStatusCode.BadRequest, invalid);
@@ -108,8 +115,8 @@ public sealed class AlertBulkTests(CrmWebFactory factory)
         selection.GetProperty("totalCount").GetInt32().ShouldBe(501);
         var titles = selection.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("title").GetString()).ToList();
         titles.Count.ShouldBe(500);
-        titles[0].ShouldBe($"{marker} n500", "the oldest first, as the queue shows them");
-        titles.ShouldNotContain($"{marker} n000");
+        titles[0].ShouldBe($"{marker} n000", "the newest first, as the queue shows them");
+        titles.ShouldNotContain($"{marker} n500");
     }
 
     [Fact]
