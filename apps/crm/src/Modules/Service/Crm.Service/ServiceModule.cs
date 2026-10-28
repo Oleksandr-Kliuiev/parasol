@@ -91,6 +91,7 @@ public static class ServiceModule
         services.AddScoped<MachineQueries>();
         services.AddScoped<MachineDecisions>();
         services.AddScoped<AlertHiding>();
+        services.AddScoped<AlertBulkHiding>();
         // Global search reaches the operations records: devices, alerts and saved tickets, read with the rights of the Drift area.
         services.AddScoped<ISearchProvider, Features.Search.DeviceSearchProvider>();
         services.AddScoped<ISearchProvider, Features.Search.AlertSearchProvider>();
@@ -226,6 +227,7 @@ public static class ServiceModule
         group.MapTicketEndpoints();
         group.MapMachineEndpoints();
         group.MapCoverageEndpoints();
+        group.MapAlertEndpoints();
 
         group.MapGet("/devices", async (Guid organizationId, DeviceType? type, bool? includeRemoved, int? limit, string? cursor, ServiceDbContext db, TimeProvider time,
                 CancellationToken ct) =>
@@ -262,36 +264,6 @@ public static class ServiceModule
                     rows.Select(d => d with { OpenAlerts = open.GetValueOrDefault(d.Id) }).ToList(),
                     page.Count > take ? new KeysetCursor(rows[^1].MachineName, rows[^1].Id).Encode() : null, total));
             })
-            .RequirePermission(Permissions.ServiceRead);
-
-        // M38: one list for a customer's tab and the queue across customers; organizationId narrows it to one customer.
-        group.MapGet("/alerts", async (
-                Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, string? cursor, int? limit, bool? hidden,
-                AlertQueries alerts, CancellationToken ct) =>
-                (await alerts.ListAsync(organizationId, state, severity, deviceId, q, cursor, limit, ct, hidden == true)).ToHttpResult(Results.Ok))
-            .RequirePermission(Permissions.ServiceRead);
-
-        // M40: hidden in Parasoll until a day, with a reason, and shown again; the source is never asked (it cannot snooze).
-        group.MapPost("/alerts/{id:guid}/hide", (Guid id, HideAlertRequest request, HttpRequest http, AlertHiding hiding, AlertQueries alerts,
-                    CancellationToken ct) => ChangeAlert(http, alerts, ifMatch => hiding.HideAsync(id, request, ifMatch, ct), ct))
-            .Validate<HideAlertRequest>()
-            .RequirePermission(Permissions.ServiceWrite);
-
-        group.MapPost("/alerts/{id:guid}/show", (Guid id, HttpRequest http, AlertHiding hiding, AlertQueries alerts, CancellationToken ct) =>
-                ChangeAlert(http, alerts, ifMatch => hiding.ShowAsync(id, ifMatch, ct), ct))
-            .RequirePermission(Permissions.ServiceWrite);
-
-        // M41: an urgent alert its source closed waits for a person; this confirms the closing, with the hold's ETag.
-        group.MapPost("/alerts/{id:guid}/confirm-closed", (Guid id, HttpRequest http, AlertHiding hiding, AlertQueries alerts, CancellationToken ct) =>
-                ChangeAlert(http, alerts, ifMatch => hiding.ConfirmClosedAsync(id, ifMatch, ct), ct))
-            .RequirePermission(Permissions.ServiceWrite);
-
-        group.MapGet("/alerts/urgent", async (int? limit, AlertQueries alerts, CancellationToken ct) =>
-                Results.Ok(await alerts.UrgentAsync(limit, ct)))
-            .RequirePermission(Permissions.ServiceRead);
-
-        group.MapGet("/alerts/{id:guid}", async (Guid id, AlertQueries alerts, CancellationToken ct) =>
-                (await alerts.GetAsync(id, ct)).ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ServiceRead);
 
         group.MapGet("/ticket-requests", async (Guid organizationId, bool? attentionOnly, int? limit, string? cursor, ServiceDbContext db, TimeProvider time, CancellationToken ct) =>
@@ -354,18 +326,5 @@ public static class ServiceModule
             .RequirePermission(Permissions.ServiceRead);
 
         return app;
-    }
-
-    /// <summary>A change of an alert's status in Parasoll: the ETag the person saw, then the alert as it is now.</summary>
-    private static async Task<IResult> ChangeAlert(
-        HttpRequest http, AlertQueries alerts, Func<string, Task<Result<Guid>>> change, CancellationToken ct)
-    {
-        if (http.GetIfMatch() is not { } ifMatch)
-        {
-            return HeaderExtensions.PreconditionRequired();
-        }
-
-        var changed = await change(ifMatch);
-        return changed.IsSuccess ? (await alerts.GetAsync(changed.Value, ct)).ToHttpResult(Results.Ok) : changed.Error!.ToProblem();
     }
 }

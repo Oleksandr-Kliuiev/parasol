@@ -24,7 +24,8 @@ internal enum TestVendorAnswer
 
 /// <summary>
 /// A vendor of the tests only (M39.1): its switches, a scripted answer per target and a log of what reached it. Kinds: <c>thing.set</c>
-/// (standard, not repeatable), <c>thing.pause</c> (disruptive, repeatable) and <c>thing.delete</c> (destructive).
+/// (standard, not repeatable), <c>thing.pause</c> (disruptive, repeatable) and <c>thing.delete</c> (destructive); a host started with
+/// batches (M45) also has <c>thing.tag</c> (standard) and <c>thing.hold</c> (disruptive), which may be asked for many targets at once.
 /// </summary>
 internal sealed class TestVendor : IVendorActionGate
 {
@@ -68,6 +69,10 @@ internal sealed class TestThingHandler(TestVendor vendor, string kind, VendorAct
         }
 
         var target = new VendorActionTarget(TestVendor.TargetType, request.TargetId, $"Thing {request.TargetId}", null, null, TestVendor.Customer, null);
+        if (request.TargetId.StartsWith("blocked", StringComparison.Ordinal))
+        {
+            return Task.FromResult(VendorActionPlan.Blocked(target, "VND_TEST_BLOCKED", "This thing cannot take it."));
+        }
         if (!request.Parameters.TryGetProperty("value", out var value) || value.ValueKind != JsonValueKind.String || value.GetString()!.Trim().Length == 0)
         {
             return Task.FromResult(VendorActionPlan.Blocked(target, "VND_TEST_VALUE", "Give a value."));
@@ -103,6 +108,37 @@ internal sealed class TestThingHandler(TestVendor vendor, string kind, VendorAct
     }
 }
 
+/// <summary>
+/// A kind of the test vendor that may be asked for many things at once (M45): each thing is planned as one asked alone would be.
+/// </summary>
+internal sealed class TestBatchThingHandler(TestVendor vendor, string kind, VendorActionLevel level) : IVendorActionHandler, IVendorActionBatchPlanner
+{
+    private readonly TestThingHandler one = new(vendor, kind, level, repeatable: true);
+
+    public string System => one.System;
+    public string Kind => one.Kind;
+    public string TargetType => one.TargetType;
+    public VendorActionLevel Level => one.Level;
+    public string Permission => one.Permission;
+    public string ReadPermission => one.ReadPermission;
+    public bool IsRepeatable => one.IsRepeatable;
+
+    public Task<VendorActionPlan> PlanAsync(VendorActionRequest request, CancellationToken cancellationToken) => one.PlanAsync(request, cancellationToken);
+
+    public Task<VendorActionResult> ExecuteAsync(VendorActionContext context, CancellationToken cancellationToken) => one.ExecuteAsync(context, cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, VendorActionPlan>> PlanManyAsync(VendorActionBatchRequest request, CancellationToken cancellationToken)
+    {
+        var plans = new Dictionary<string, VendorActionPlan>(StringComparer.Ordinal);
+        foreach (var id in request.TargetIds)
+        {
+            plans[id] = await one.PlanAsync(new VendorActionRequest(request.System, request.Kind, request.TargetType, id, request.Parameters), cancellationToken);
+        }
+
+        return plans;
+    }
+}
+
 /// <summary>A CRM host whose action registry also knows the test vendor; the clients send the test sign-in headers.</summary>
 internal sealed class VendorActionHost(WebApplicationFactory<Program> host, TestVendor vendor) : IAsyncDisposable
 {
@@ -110,9 +146,15 @@ internal sealed class VendorActionHost(WebApplicationFactory<Program> host, Test
 
     public IServiceProvider Services => host.Services;
 
-    public static VendorActionHost Start(CrmWebFactory factory)
+    /// <param name="batches">Also the kinds a batch takes (M45), switched on with the others.</param>
+    public static VendorActionHost Start(CrmWebFactory factory, bool batches = false)
     {
         var vendor = new TestVendor();
+        if (batches)
+        {
+            vendor.Switches = vendor.Switches with { EnabledActions = [.. vendor.Switches.EnabledActions, "thing.tag", "thing.hold"] };
+        }
+
         var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
             services.AddSingleton(vendor);
@@ -120,6 +162,11 @@ internal sealed class VendorActionHost(WebApplicationFactory<Program> host, Test
             services.AddScoped<IVendorActionHandler>(_ => new TestThingHandler(vendor, "thing.set", VendorActionLevel.Standard, repeatable: false));
             services.AddScoped<IVendorActionHandler>(_ => new TestThingHandler(vendor, "thing.pause", VendorActionLevel.Disruptive, repeatable: true));
             services.AddScoped<IVendorActionHandler>(_ => new TestThingHandler(vendor, "thing.delete", VendorActionLevel.Destructive, repeatable: false));
+            if (batches)
+            {
+                services.AddScoped<IVendorActionHandler>(_ => new TestBatchThingHandler(vendor, "thing.tag", VendorActionLevel.Standard));
+                services.AddScoped<IVendorActionHandler>(_ => new TestBatchThingHandler(vendor, "thing.hold", VendorActionLevel.Disruptive));
+            }
         }));
         return new VendorActionHost(host, vendor);
     }

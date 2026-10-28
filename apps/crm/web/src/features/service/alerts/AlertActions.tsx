@@ -14,7 +14,7 @@ import { confirmClosed } from '../../security/api';
 import { AlertHideDialog } from './AlertHideDialog';
 import { showAlert } from './alertHiding';
 import {
-  AlertActionsContext, alertRequest, useAlertActions, useAlertParasollKinds, useAlertSourceKinds, type AlertLike, type AlertParasollKind,
+  AlertActionsContext, alertRequest, focusList, useAlertActions, useAlertParasollKinds, useAlertSourceKinds, type AlertLike, type AlertParasollKind,
   type AlertSourceKind,
 } from './alertSourceActions';
 import { alertTitle, sourceName } from './alertText';
@@ -65,11 +65,6 @@ function useConfirmClosed() {
   }, [changed, notify, t]);
 }
 
-/**
- * A hidden or shown alert leaves the list it was in, with the button that changed it: focus goes to the list (data-alert-list),
- * never to the page behind it.
- */
-const focusList = () => window.setTimeout(() => document.querySelector<HTMLElement>('[data-alert-list]')?.focus(), 0);
 
 /**
  * Holds the confirmation of an alert action and the hide dialog outside the rows of a list, as AlertTaskDialogHost does for the

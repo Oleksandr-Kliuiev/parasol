@@ -44,7 +44,8 @@ public sealed record VendorActionItem(
     string? CloseReason,
     Guid? TicketId,
     string? VendorUrl,
-    string Etag);
+    string Etag,
+    Guid? BatchId = null);
 
 /// <summary>A page of the log; <c>Uncertain</c> and <c>Waiting</c> count the whole filter, as the log's header says them.</summary>
 public sealed record VendorActionPage(IReadOnlyList<VendorActionItem> Items, string? NextCursor, int TotalCount, int Uncertain, int Waiting);
@@ -153,6 +154,38 @@ public sealed class VendorActionReader(
         ]);
     }
 
+    /// <summary>
+    /// A batch as it stands now (M45): how many of its actions wait and how many came to each outcome, and with
+    /// <paramref name="withItems"/> every action of it in the order asked, so a dialog says what happened to each target. Only actions the
+    /// caller may read count; a batch with none of them is not found.
+    /// </summary>
+    public async Task<Result<VendorActionBatchState>> BatchAsync(Guid batchId, bool withItems, CancellationToken ct)
+    {
+        var actions = Visible().Where(a => a.BatchId == batchId);
+        var counts = await actions.GroupBy(a => new { a.System, a.Kind, a.Status })
+            .Select(g => new { g.Key.System, g.Key.Kind, g.Key.Status, Count = g.Count() }).ToListAsync(ct);
+        if (counts.Count == 0)
+        {
+            return Error.NotFound("VND_BATCH_NOT_FOUND", "The batch was not found.");
+        }
+
+        int Count(params VendorActionStatus[] statuses) => counts.Where(c => statuses.Contains(c.Status)).Sum(c => c.Count);
+        IReadOnlyList<VendorActionBatchEntry> items = [];
+        if (withItems)
+        {
+            var rows = await actions.OrderBy(a => a.Id)
+                .Select(a => new { a.Id, a.TargetId, a.TargetName, a.OrganizationId, a.Status, a.OutcomeCode, a.CompletedAt }).ToListAsync(ct);
+            var organizations = await customers.GetOrganizationNamesAsync(
+                rows.Where(r => r.OrganizationId != null).Select(r => r.OrganizationId!.Value).Distinct().ToList(), ct);
+            items = rows.Select(r => new VendorActionBatchEntry(r.Id, r.TargetId, r.TargetName, r.OrganizationId,
+                r.OrganizationId is { } organization ? organizations.GetValueOrDefault(organization) : null, r.Status, r.OutcomeCode, r.CompletedAt)).ToList();
+        }
+
+        return new VendorActionBatchState(batchId, counts[0].System, counts[0].Kind, counts.Sum(c => c.Count), Count(Waiting),
+            Count(VendorActionStatus.Succeeded), Count(VendorActionStatus.Skipped), Count(VendorActionStatus.Simulated),
+            Count(VendorActionStatus.Rejected, VendorActionStatus.Failed, VendorActionStatus.Cancelled), Count(VendorActionStatus.Uncertain), items);
+    }
+
     /// <summary>Every action for the integrations administrators; for others only the kinds whose read permission they hold.</summary>
     private IQueryable<VendorAction> Visible()
     {
@@ -183,7 +216,7 @@ public sealed class VendorActionReader(
             JsonDocument.Parse(a.Parameters).RootElement.Clone(), a.Reason, a.Status, a.OutcomeCode, a.Outcome, a.Reference, a.Attempts,
             a.RequestedBy, people.GetValueOrDefault(a.RequestedBy)?.DisplayName, a.RequestedAt, a.NotBefore, a.StartedAt, a.CompletedAt,
             a.ClosedBy, a.ClosedBy is { } closer ? people.GetValueOrDefault(closer)?.DisplayName : null, a.ClosedAt, a.CloseReason,
-            tickets.GetValueOrDefault(a.Id)?.Id, tickets.GetValueOrDefault(a.Id)?.Url, Etag(a))).ToList();
+            tickets.GetValueOrDefault(a.Id)?.Id, tickets.GetValueOrDefault(a.Id)?.Url, Etag(a), a.BatchId)).ToList();
     }
 
     /// <summary>The saved ticket each action concerns, read per vendor in one batch for the page.</summary>

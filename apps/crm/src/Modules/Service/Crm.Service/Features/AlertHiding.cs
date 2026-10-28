@@ -63,19 +63,32 @@ internal sealed class AlertHiding(ServiceDbContext db, TimeProvider time, ICurre
         }
 
         var now = time.GetUtcNow();
+        var until = HiddenUntil(request.Until, now);
+        if (!until.IsSuccess)
+        {
+            return until.Error!;
+        }
+
+        var reason = request.Reason.Trim();
+        alert.Hide(until.Value, reason, user.UserId, now);
+        db.AlertTransitions.Add(AlertTransition.Hidden(alert.Id, until.Value, alert.EnsureHold().Reason!));
+        return await SaveAsync(alert, ct);
+    }
+
+    /// <summary>
+    /// The time an alert hidden until <paramref name="day"/> comes back: the start of that day in Oslo. The day lies after today and at
+    /// most <see cref="MaxDays"/> ahead; one alert and a bulk hide (M45) take the same days.
+    /// </summary>
+    public static Result<DateTimeOffset> HiddenUntil(DateOnly day, DateTimeOffset now)
+    {
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Oslo).DateTime);
-        if (request.Until <= today || request.Until > today.AddDays(MaxDays))
+        if (day <= today || day > today.AddDays(MaxDays))
         {
             return Error.Validation("SRV_ALERT_HIDE_DATE", $"Choose a day after today and at most {MaxDays} days ahead.");
         }
 
-        // The alert comes back at the start of the chosen day in Oslo.
-        var start = request.Until.ToDateTime(TimeOnly.MinValue);
-        var until = new DateTimeOffset(start, Oslo.GetUtcOffset(start));
-        var reason = request.Reason.Trim();
-        alert.Hide(until, reason, user.UserId, now);
-        db.AlertTransitions.Add(AlertTransition.Hidden(alert.Id, until, alert.EnsureHold().Reason!));
-        return await SaveAsync(alert, ct);
+        var start = day.ToDateTime(TimeOnly.MinValue);
+        return new DateTimeOffset(start, Oslo.GetUtcOffset(start));
     }
 
     public async Task<Result<Guid>> ShowAsync(Guid id, string ifMatch, CancellationToken ct)

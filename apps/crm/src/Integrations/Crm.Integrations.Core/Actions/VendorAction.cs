@@ -145,6 +145,11 @@ public sealed class VendorAction
     /// <summary>The client's key for this command: a repeated request with it returns this action (unique per person).</summary>
     public Guid CommandKey { get; init; }
 
+    /// <summary>
+    /// The batch the action was asked in (M45: one confirmation for many targets, one action each); null for an action asked alone.
+    /// </summary>
+    public Guid? BatchId { get; init; }
+
     public Guid OutboundOperationId { get; init; }
     public VendorActionStatus Status { get; set; }
 

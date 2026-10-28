@@ -15,6 +15,12 @@ export type AlertLike = Pick<Alert, 'id' | 'system' | 'externalId' | 'title' | '
  */
 export type AlertParasollKind = 'hide' | 'show' | 'confirm';
 
+/**
+ * A hidden or shown alert leaves the list it was in, with the button that changed it (M45: the bulk bar with its selection): focus goes
+ * to the list (data-alert-list), never to the page behind it.
+ */
+export const focusList = () => window.setTimeout(() => document.querySelector<HTMLElement>('[data-alert-list]')?.focus(), 0);
+
 export const alertRequest = (alert: Pick<Alert, 'system' | 'externalId'>, kind: AlertSourceKind): ActionRequest =>
   ({ system: alert.system, kind, targetType: 'alert', targetId: alert.externalId, parameters: {} });
 

@@ -92,6 +92,8 @@ export interface VendorAction {
   /** Where to check the action at the vendor: the ticket there. */
   vendorUrl: string | null;
   etag: string;
+  /** The batch it was asked in (M45: one confirmation for many targets); null when asked alone. */
+  batchId?: string | null;
 }
 
 /**
@@ -114,6 +116,8 @@ export interface ActionKind {
   level: ActionLevel;
   simulated: boolean;
   limitedToCustomers: boolean;
+  /** It may also be asked for many targets with one confirmation (M45); never a destructive kind. */
+  batch?: boolean;
 }
 
 /** A page of the log; `uncertain` and `waiting` count the whole filter. */
@@ -123,4 +127,82 @@ export interface ActionPage {
   totalCount: number;
   uncertain: number;
   waiting: number;
+}
+
+/** Many targets of one kind asked for with one confirmation (M45), with the parameters every one of them takes. */
+export interface ActionBatchRequest {
+  system: string;
+  kind: string;
+  targetType: string;
+  targetIds: string[];
+  parameters: Record<string, unknown>;
+}
+
+/** One target of a batch preview: its saved copy (null when Parasoll has none) and what keeps it out, if anything. */
+export interface ActionBatchTarget {
+  targetId: string;
+  target: ActionTarget | null;
+  block: ActionBlock | null;
+  /** The action of the same kind someone already asked for it, not sent yet: it is not asked twice. */
+  waitingActionId: string | null;
+}
+
+/** The preview of a batch, from saved data only: `ready` targets get an action each; the token is valid for ten minutes. */
+export interface ActionBatchPreview {
+  previewToken: string | null;
+  expiresAt: string | null;
+  system: string;
+  kind: string;
+  level: ActionLevel;
+  targets: ActionBatchTarget[];
+  ready: number;
+  /** What keeps the whole batch back (the kind switched off, writing off). */
+  block: ActionBlock | null;
+  confirmation: ActionConfirmation;
+  simulated: boolean;
+  paused: boolean;
+}
+
+/** What the command did with one target: the action asked for it, or the code of what kept it out. */
+export interface ActionBatchItem {
+  targetId: string;
+  actionId: string | null;
+  status: ActionStatus | null;
+  code: string | null;
+}
+
+/** The batch the command saved; `repeated` when an earlier answer of the same confirmation had saved it. */
+export interface ActionBatchResult {
+  batchId: string | null;
+  items: ActionBatchItem[];
+  asked: number;
+  repeated: boolean;
+}
+
+/** One action of a batch as it stands now. */
+export interface ActionBatchEntry {
+  actionId: string;
+  targetId: string;
+  targetName: string;
+  organizationId: string | null;
+  organizationName: string | null;
+  status: ActionStatus;
+  outcomeCode: string | null;
+  completedAt: string | null;
+}
+
+/** A batch as it stands now: how many wait and how many came to each outcome, with its actions when asked for. */
+export interface ActionBatchState {
+  id: string;
+  system: string;
+  kind: string;
+  total: number;
+  waiting: number;
+  succeeded: number;
+  skipped: number;
+  simulated: number;
+  /** Refused, failed or cancelled: nothing happened at the vendor. */
+  failed: number;
+  uncertain: number;
+  items: ActionBatchEntry[];
 }

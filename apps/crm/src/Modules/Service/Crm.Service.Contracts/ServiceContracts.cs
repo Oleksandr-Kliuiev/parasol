@@ -228,6 +228,12 @@ public interface IServiceApi
     /// <summary>The stored alerts among <paramref name="alertIds"/>, keyed by id; ids without an alert are left out.</summary>
     Task<IReadOnlyDictionary<Guid, AlertRef>> GetAlertsAsync(IReadOnlyCollection<Guid> alertIds, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The stored alerts of a source among <paramref name="externalIds"/> (the source's own ids), in any state, keyed by that id; ids
+    /// without an alert are left out. One read for a batch of actions (M45), not one per alert.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, AlertRef>> GetAlertsAsync(string system, IReadOnlyCollection<string> externalIds, CancellationToken cancellationToken);
+
     /// <summary>Stores today's device count per organization and type (BR-SRV-03); safe to repeat on the same day.</summary>
     Task<int> TakeDeviceSnapshotAsync(DateOnly date, CancellationToken cancellationToken);
 

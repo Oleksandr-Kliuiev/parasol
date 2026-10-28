@@ -44,9 +44,10 @@ public sealed record VendorActionPreview(
 /// <summary>
 /// A kind the caller may ask for now (M39.3): its handler is registered, the caller holds its permission and the vendor's switches let
 /// it through. <paramref name="Simulated"/>: the vendor is in DryRun. <paramref name="LimitedToCustomers"/>: an allow-list may still
-/// refuse the customer, which the preview says.
+/// refuse the customer, which the preview says. <paramref name="Batch"/>: it may also be asked for many targets at once (M45).
 /// </summary>
-public sealed record VendorActionKindItem(string System, string Kind, string TargetType, VendorActionLevel Level, bool Simulated, bool LimitedToCustomers);
+public sealed record VendorActionKindItem(
+    string System, string Kind, string TargetType, VendorActionLevel Level, bool Simulated, bool LimitedToCustomers, bool Batch = false);
 
 public sealed record VendorActionCommand(
     string? PreviewToken, string? System, string? Kind, string? TargetType, string? TargetId, JsonElement Parameters, Guid CommandKey,
@@ -87,7 +88,8 @@ public sealed class VendorActionService(
             .Where(x => x.Switches is { } s && VendorActionRules.CheckSwitches(s with { AllowedCustomerIds = [] }, x.Handler.Kind, null, credentials: false) is null)
             .OrderBy(x => x.Handler.System, StringComparer.Ordinal).ThenBy(x => x.Handler.Kind, StringComparer.Ordinal)
             .Select(x => new VendorActionKindItem(
-                x.Handler.System, x.Handler.Kind, x.Handler.TargetType, x.Handler.Level, x.Switches!.DryRun, x.Switches.AllowedCustomerIds.Count > 0)),
+                x.Handler.System, x.Handler.Kind, x.Handler.TargetType, x.Handler.Level, x.Switches!.DryRun, x.Switches.AllowedCustomerIds.Count > 0,
+                VendorActionBatches.Supports(x.Handler))),
     ];
 
     public async Task<Result<VendorActionPreview>> PreviewAsync(VendorActionPreviewRequest body, IDataProtectionProvider protection, CancellationToken ct)
@@ -186,47 +188,7 @@ public sealed class VendorActionService(
             return Error.Conflict(off.Code, off.Message);
         }
 
-        var now = time.GetUtcNow();
-        var notBefore = handler.Level == VendorActionLevel.Destructive ? now + VendorActionRules.DestructiveHold : now;
-        var action = new VendorAction
-        {
-            Id = SequentialId.New(now),
-            System = handler.System,
-            Kind = handler.Kind,
-            Level = handler.Level,
-            TargetType = handler.TargetType,
-            TargetId = target.Id,
-            TargetName = Clip(target.Name, 256),
-            OrganizationId = target.OrganizationId,
-            ExternalCustomerId = target.ExternalCustomerId,
-            Parameters = plan.CanonicalParameters,
-            Fingerprint = fingerprint,
-            Reason = handler.Level == VendorActionLevel.Standard ? null : body.Reason!.Trim(),
-            RequestedBy = userId,
-            RequestedAt = now,
-            NotBefore = notBefore,
-            CommandKey = body.CommandKey,
-            OutboundOperationId = SequentialId.New(now),
-            Status = handler.Level == VendorActionLevel.Destructive ? VendorActionStatus.Scheduled : VendorActionStatus.Queued,
-        };
-        db.VendorActions.Add(action);
-        db.OutboundOperations.Add(new OutboundOperation
-        {
-            Id = action.OutboundOperationId,
-            System = action.System,
-            Operation = VendorAction.OperationFor(action.Kind),
-            EntityType = VendorAction.EntityType,
-            EntityId = action.Id,
-            IdempotencyKey = $"{VendorAction.OperationPrefix}{action.Id:D}",
-            Status = OutboundStatus.Pending,
-            CreatedAt = now,
-            RequestedBy = userId,
-            NextAttemptAt = notBefore,
-        });
-        db.RecordAudit(user, request, time, AuditActions.Create, VendorAction.EntityType, action.Id, new
-        {
-            action.System, action.Kind, Level = action.Level.ToString(), action.TargetType, action.TargetId, action.OrganizationId, action.Reason,
-        });
+        var action = Enqueue(handler, target, plan.CanonicalParameters, fingerprint, body.Reason, userId, body.CommandKey, null);
         try
         {
             await db.SaveChangesAsync(ct);
@@ -365,6 +327,59 @@ public sealed class VendorActionService(
         }
 
         return await reader.ItemAsync(action, ct);
+    }
+
+    /// <summary>
+    /// Adds an action and the outbound operation that carries it, with its audit entry, to the unit of work: one target, asked alone or
+    /// (M45) as part of a batch. Nothing is saved here.
+    /// </summary>
+    internal VendorAction Enqueue(
+        IVendorActionHandler handler, VendorActionTarget target, string parameters, string fingerprint, string? reason, Guid userId, Guid commandKey,
+        Guid? batchId)
+    {
+        var now = time.GetUtcNow();
+        var notBefore = handler.Level == VendorActionLevel.Destructive ? now + VendorActionRules.DestructiveHold : now;
+        var action = new VendorAction
+        {
+            Id = SequentialId.New(now),
+            System = handler.System,
+            Kind = handler.Kind,
+            Level = handler.Level,
+            TargetType = handler.TargetType,
+            TargetId = target.Id,
+            TargetName = Clip(target.Name, 256),
+            OrganizationId = target.OrganizationId,
+            ExternalCustomerId = target.ExternalCustomerId,
+            Parameters = parameters,
+            Fingerprint = fingerprint,
+            Reason = handler.Level == VendorActionLevel.Standard ? null : reason!.Trim(),
+            RequestedBy = userId,
+            RequestedAt = now,
+            NotBefore = notBefore,
+            CommandKey = commandKey,
+            BatchId = batchId,
+            OutboundOperationId = SequentialId.New(now),
+            Status = handler.Level == VendorActionLevel.Destructive ? VendorActionStatus.Scheduled : VendorActionStatus.Queued,
+        };
+        db.VendorActions.Add(action);
+        db.OutboundOperations.Add(new OutboundOperation
+        {
+            Id = action.OutboundOperationId,
+            System = action.System,
+            Operation = VendorAction.OperationFor(action.Kind),
+            EntityType = VendorAction.EntityType,
+            EntityId = action.Id,
+            IdempotencyKey = $"{VendorAction.OperationPrefix}{action.Id:D}",
+            Status = OutboundStatus.Pending,
+            CreatedAt = now,
+            RequestedBy = userId,
+            NextAttemptAt = notBefore,
+        });
+        db.RecordAudit(user, request, time, AuditActions.Create, VendorAction.EntityType, action.Id, new
+        {
+            action.System, action.Kind, Level = action.Level.ToString(), action.TargetType, action.TargetId, action.OrganizationId, action.Reason, action.BatchId,
+        });
+        return action;
     }
 
     private async Task<Result<(VendorActionItem Action, bool Created)>> RepeatAsync(VendorAction earlier, VendorActionPreviewClaim? claim, CancellationToken ct) =>
