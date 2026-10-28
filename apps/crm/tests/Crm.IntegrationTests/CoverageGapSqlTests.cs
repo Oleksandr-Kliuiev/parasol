@@ -44,6 +44,8 @@ public sealed class CoverageGapSqlTests(CrmWebFactory factory)
             .ShouldBe((CoverageGaps.System, rule, "Monitoring", "Critical"));
         gap.GetProperty("facts").GetProperty("device").GetString().ShouldBe($"{marker}-SRV");
         gap.GetProperty("title").GetString().ShouldStartWith($"The Atera agent on {marker}-SRV has not reported since ");
+        // Dated by its cause, not by the check: silent for 10 days, the 7-day limit passed 3 days ago.
+        gap.GetProperty("createdAt").GetDateTimeOffset().ShouldBe(now.AddDays(-3), TimeSpan.FromSeconds(1));
         gap.GetProperty("deviceId").GetGuid().ShouldNotBe(Guid.Empty);
         gap.GetProperty("machineId").GetGuid().ShouldNotBe(Guid.Empty, "the panel leads to the device's card");
         var summary = await (await admin.GetAsync($"/api/v1/service/organizations/{organizationId}/summary", Ct)).ReadJsonAsync();

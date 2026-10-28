@@ -71,6 +71,31 @@ public sealed class CoverageGapTests
     }
 
     [Fact]
+    public void A_gap_is_dated_by_when_it_began_where_the_finding_tells_and_an_older_beginning_moves_a_lasting_gap_back()
+    {
+        // An agent silent since 12.10 passed the 7-day limit on 19.10: a first check on 22.10 dates the gap by that, not by itself.
+        var began = DateTimeOffset.Parse("2026-10-19T08:00:00Z");
+        var gap = Check([Finding() with { Since = began }], [], Now).Added.Single();
+        gap.CreatedAtSource.ShouldBe(began);
+
+        // A gap found before its rule could date it (stored by an earlier release) moves back once; a later beginning never moves it on.
+        var undated = Check([Finding()], [], Now).Added.Single();
+        undated.CreatedAtSource.ShouldBe(Now);
+        Check([Finding() with { Since = began }], [undated], Now.AddDays(1));
+        undated.CreatedAtSource.ShouldBe(began);
+        Check([Finding() with { Since = began.AddDays(2) }], [undated], Now.AddDays(2));
+        undated.CreatedAtSource.ShouldBe(began, "a lasting gap keeps the earliest beginning it was told");
+
+        // Never in the future, and a new occurrence never begins before the last one closed.
+        Check([Finding() with { Since = Now.AddDays(3) }], [], Now).Added.Single().CreatedAtSource.ShouldBe(Now);
+        Check([], [gap], Now.AddDays(1));
+        Check([], [gap], Now.AddDays(2));
+        gap.State.ShouldBe(AlertState.Resolved);
+        Check([Finding() with { Since = began }], [gap], Now.AddDays(3)).Result.Reopened.ShouldBe(1);
+        gap.CreatedAtSource.ShouldBe(Now.AddDays(2), "the closed occurrence ended there");
+    }
+
+    [Fact]
     public void Facts_keep_a_fixed_order_and_are_left_out_when_they_do_not_fit()
     {
         var shuffled = Finding() with { Facts = new Dictionary<string, string> { ["lastSeenAt"] = "x", ["device"] = "SRV-01" } };

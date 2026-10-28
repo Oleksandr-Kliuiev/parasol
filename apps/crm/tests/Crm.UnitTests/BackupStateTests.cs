@@ -117,6 +117,15 @@ public class BackupStateTests
         merged.Size.ShouldBe(15);
     }
 
+    [Theory]
+    [InlineData(0, 22, 22)] // CloudAlly's line billed per user: no seats, the users in accounts.
+    [InlineData(25, 22, 25)] // A plan that sells seats bills the seats.
+    [InlineData(null, 14, 14)]
+    [InlineData(0, null, 0)]
+    [InlineData(null, null, null)]
+    public void A_bill_line_bills_its_seats_where_its_plan_sells_seats_else_its_accounts(int? seats, int? accounts, int? users) =>
+        BackupBillCounts.Users(seats, accounts).ShouldBe(users);
+
     private static JsonElement Json(string text)
     {
         using var document = JsonDocument.Parse(text);

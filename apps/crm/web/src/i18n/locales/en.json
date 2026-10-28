@@ -340,9 +340,9 @@
     "alerts": {
       "title": "Urgent alerts",
       "refresh": "Refresh urgent alerts",
-      "shownSome": "{{shown}} of {{total}} open alerts, most severe and oldest first",
+      "shownSome": "{{shown}} of {{total}} open alerts, most severe and newest first",
       "shownAll_one": "{{count}} open alert",
-      "shownAll_other": "{{count}} open alerts, most severe and oldest first",
+      "shownAll_other": "{{count}} open alerts, most severe and newest first",
       "all": "All open alerts ({{count}})",
       "empty": "No open alerts.",
       "emptyNotRead": "Alerts appear here after the first read.",
@@ -1758,7 +1758,7 @@
   },
   "alerts": {
     "title": "Alerts",
-    "subtitle": "Open alerts of every customer: the critical ones first, then the ones that have waited longest.",
+    "subtitle": "Open alerts of every customer: the critical ones first, then the newest.",
     "subtitleResolved": "Alerts their source no longer reports open, the most recently resolved first.",
     "subtitleHidden": "Alerts hidden in Parasoll until a date; they are still open in their source.",
     "refresh": "Refresh alerts",
@@ -1781,6 +1781,8 @@
     "olderThan_one": "Older than {{count}} day",
     "olderThan_other": "Older than {{count}} days",
     "olderThanYear": "Older than a year",
+    "newerThan_one": "Last 24 hours",
+    "newerThan_other": "Last {{count}} days",
     "clearFilters": "Clear filters",
     "totals_one": "{{count}} alert: {{critical}} critical, {{warning}} warnings",
     "totals_other": "{{count}} alerts: {{critical}} critical, {{warning}} warnings",
@@ -1835,7 +1837,9 @@
       },
       "userNotBackedUp": {
         "title_one": "{{count}} licensed Microsoft 365 user has no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)",
-        "title_other": "{{count}} licensed Microsoft 365 users have no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)"
+        "title_other": "{{count}} licensed Microsoft 365 users have no mailbox backup ({{licensed}} licensed, {{backedUp}} in backup)",
+        "marked_one": "{{count}} mailbox CloudAlly marks as licensed is not in the backup ({{licensed}} licensed, {{backedUp}} in backup)",
+        "marked_other": "{{count}} mailboxes CloudAlly marks as licensed are not in the backup ({{licensed}} licensed, {{backedUp}} in backup)"
       }
     },
     "reads": {
@@ -2157,7 +2161,7 @@
       },
       "userNotBackedUp": {
         "name": "Licensed user without backup",
-        "description": "A warning when more of the customer’s users hold a Microsoft 365 licence with a mailbox (Partner Center) than there are mailboxes in the CloudAlly backup. Customers without licence data are not checked, and their Backup tab says so.",
+        "description": "A warning when more of the customer’s users hold a Microsoft 365 licence with a mailbox (Partner Center) than there are mailboxes in the CloudAlly backup. A customer without licence data is checked by CloudAlly’s own mark instead: mailboxes it marks as licensed that are not in the backup.",
         "when": "Checked after each complete read of CloudAlly, every second hour."
       }
     },
@@ -5618,7 +5622,11 @@
       "missing_one": "{{count}} licensed user has no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
       "missing_other": "{{count}} licensed users have no mailbox in the backup: {{licensed}} licensed, {{backedUp}} in backup (Partner Center, {{date}}).",
       "allIn_one": "The licensed user has their mailbox in the backup (Partner Center, {{date}}).",
-      "allIn_other": "All {{count}} licensed users have their mailbox in the backup (Partner Center, {{date}})."
+      "allIn_other": "All {{count}} licensed users have their mailbox in the backup (Partner Center, {{date}}).",
+      "markedMissing_one": "{{count}} mailbox that CloudAlly marks as licensed is not in the backup: {{licensed}} licensed, {{backedUp}} in backup. It is listed below under Need attention. Partner Center has no licence data for this customer, so this is CloudAlly’s count.",
+      "markedMissing_other": "{{count}} mailboxes that CloudAlly marks as licensed are not in the backup: {{licensed}} licensed, {{backedUp}} in backup. They are listed below under Need attention. Partner Center has no licence data for this customer, so this is CloudAlly’s count.",
+      "markedAllIn_one": "The mailbox CloudAlly marks as licensed is in the backup (CloudAlly’s count: Partner Center has no licence data for this customer).",
+      "markedAllIn_other": "All {{count}} mailboxes CloudAlly marks as licensed are in the backup (CloudAlly’s count: Partner Center has no licence data for this customer)."
     },
     "tasks": {
       "title": "Services in CloudAlly"

@@ -71,10 +71,12 @@ const gapRules: Record<string, { key: string; title: GapWords }> = {
       ? t('alerts.gaps.backupPaused.whole', { service: service(t, facts), account: facts.account })
       : t('alerts.gaps.backupPaused.some', { service: service(t, facts), paused: facts.paused, total: facts.total, account: facts.account }),
   },
+  // Partner Center's count of licences, or, for a customer without it, CloudAlly's own mark on each mailbox (`by`).
   'cloudally.user-not-backed-up': {
     key: 'userNotBackedUp',
     title: (t, facts) => facts.missing && facts.licensed && facts.backedUp
-      ? t('alerts.gaps.userNotBackedUp.title', { count: Number(facts.missing), licensed: facts.licensed, backedUp: facts.backedUp })
+      ? t(facts.by === 'cloudally' ? 'alerts.gaps.userNotBackedUp.marked' : 'alerts.gaps.userNotBackedUp.title',
+        { count: Number(facts.missing), licensed: facts.licensed, backedUp: facts.backedUp })
       : null,
   },
 };

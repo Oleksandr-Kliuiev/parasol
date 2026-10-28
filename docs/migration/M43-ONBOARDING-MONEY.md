@@ -127,7 +127,10 @@ CloudAlly требует пароль нового аккаунта: Parasoll с
   организаций Huntress (`huntress-organizations`) пишет дневной снимок `security.UsageDays` (миграция `HuntressUsageDays`, только
   контекст Security): прошлый период выставляется по его последнему дню, а не по сегодняшнему числу.
 - **`QuantityModel.PerBackupSeat`** — оплачиваемые пользователи CloudAlly: по дневным строкам счёта (`backup.BillLines`) — наибольшая
-  строка аккаунта за день, сумма по аккаунтам клиента (`IBackupApi.GetSeatCountReadingsAsync`).
+  строка аккаунта за день, сумма по аккаунтам клиента (`IBackupApi.GetSeatCountReadingsAsync`). Пользователи строки —
+  `BackupBillCounts.Users`: места, если план продаёт места, иначе аккаунты. На рабочем аккаунте строка с оплатой за пользователя
+  приходит с `seat` 0 и пользователями в `accounts` (сумма строки = аккаунты × цена); до 28.10.2026 `seat ?? accounts` брал этот
+  ноль, и счётчик был 0 у всех клиентов. Вкладка «Avtaler» показывает то же число (`ServiceBillLine.Users`).
 - Нет счётчика — оценка договора и `BIL_NO_AGENT_READING` / `BIL_NO_SEAT_READING`; счётчик старше `Billing:StaleQuantityDays` —
   `BIL_STALE_QUANTITY`. Оба считаются в `billing:estimated` (`BillingOperationalSignals`), ничего не блокируют. Инварианты биллинга
   (DEV-01…04, ADR-011/012/013, M25/ADR-028) не тронуты: количество приходит в черновое основание тем же путём, что у Atera и Microsoft

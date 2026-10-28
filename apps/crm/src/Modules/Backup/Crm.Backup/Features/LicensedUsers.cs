@@ -15,6 +15,9 @@ namespace Crm.Backup.Features;
 /// </summary>
 internal sealed class LicensedUsers(BackupDbContext db, ILicensingApi licensing, IOptions<BackupOptions> options, TimeProvider time)
 {
+    /// <summary>CloudAlly's word for a mailbox Microsoft licenses, as the mirror stores it (upper case).</summary>
+    private const string Licensed = "LICENSED";
+
     private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
 
     public async Task<IReadOnlyDictionary<Guid, LicenceCount>> CountAsync(IReadOnlyCollection<Guid> organizations, CancellationToken ct)
@@ -35,6 +38,35 @@ internal sealed class LicensedUsers(BackupDbContext db, ILicensingApi licensing,
                 counted.Sum(r => r.Assigned), backedUp.GetValueOrDefault(g.Key), g.Max(r => r.SnapshotDate),
                 counted.Select(r => r.SkuPartNumber).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal).ToList());
         });
+    }
+
+    /// <summary>
+    /// The customers' mailboxes that CloudAlly itself marks as licensed by Microsoft (<c>LICENSED</c>), and how many of them are in the
+    /// mail backup: the answer for a customer without a licence reading (Partner Center not connected, or the customer not linked to
+    /// it). Counted per mailbox, so a shared mailbox without a licence is never missing; a mailbox another task backs up, or that is
+    /// archived, counts neither way. A customer none of whose mailboxes CloudAlly marks has no answer, never a zero.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<Guid, MarkedCount>> MarkedAsync(IReadOnlyCollection<Guid> organizations, CancellationToken ct)
+    {
+        if (organizations.Count == 0)
+        {
+            return new Dictionary<Guid, MarkedCount>();
+        }
+
+        var rows = await (from e in db.Entities.AsNoTracking()
+                          join t in db.Tasks.AsNoTracking() on e.TaskId equals t.Id
+                          join a in db.Accounts.AsNoTracking() on t.AccountId equals a.Id
+                          where organizations.Contains(a.OrganizationId) && t.Service == BackupService.Mail && e.Licensing == Licensed
+                          select new { a.OrganizationId, e.Name, e.Status })
+            .ToListAsync(ct);
+        return rows.Where(r => !BackupStatuses.IsAside(r.Status))
+            .GroupBy(r => r.OrganizationId)
+            .ToDictionary(g => g.Key, g =>
+            {
+                // One address may sit in two tasks of the customer: it is in backup when one of them backs it up.
+                var mailboxes = g.GroupBy(r => r.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                return new MarkedCount(mailboxes.Count, mailboxes.Count(m => m.Any(r => !BackupStatuses.IsNotActive(r.Status))));
+            });
     }
 
     /// <summary>The distinct mailboxes in a mail backup of each customer: added to it, whatever their last backup did.</summary>
@@ -59,4 +91,10 @@ internal sealed class LicensedUsers(BackupDbContext db, ILicensingApi licensing,
 internal sealed record LicenceCount(int Licensed, int BackedUp, DateOnly ReadOn, IReadOnlyList<string> Skus)
 {
     public int Missing => Math.Max(Licensed - BackedUp, 0);
+}
+
+/// <summary>One customer's mailboxes CloudAlly marks as licensed, and how many of them are in the backup.</summary>
+internal sealed record MarkedCount(int Licensed, int BackedUp)
+{
+    public int Missing => Licensed - BackedUp;
 }

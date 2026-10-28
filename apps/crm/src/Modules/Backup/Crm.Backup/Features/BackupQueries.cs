@@ -26,9 +26,10 @@ public sealed record BackupTaskItem(
     bool Paused, bool Running, DateTimeOffset? LastBackupAt, string? NextBackup, int Entities, int Problems);
 
 /// <summary>
-/// The check of licensed users (M42). <paramref name="State"/> NoData: Partner Center has no licence reading of the customer, so
-/// nothing is said about who is missing; Checked: <paramref name="Licensed"/> users hold a licence with a mailbox,
-/// <paramref name="BackedUp"/> mailboxes are in backup.
+/// The check of licensed users (M42). <paramref name="State"/> Checked: <paramref name="Licensed"/> users hold a licence with a
+/// mailbox (Partner Center), <paramref name="BackedUp"/> mailboxes are in backup; Marked: Partner Center has no licence reading of the
+/// customer, and CloudAlly marks <paramref name="Licensed"/> of its mailboxes as licensed, <paramref name="BackedUp"/> of them in
+/// backup; NoData: neither, so nothing is said about who is missing.
 /// </summary>
 public sealed record BackupLicenceCheck(string State, int? Licensed, int BackedUp, int? Missing, DateOnly? ReadOn);
 
@@ -179,8 +180,15 @@ internal sealed class BackupQueries(
     private async Task<BackupLicenceCheck> LicencesAsync(Guid organizationId, CancellationToken ct)
     {
         var counts = await licences.CountAsync([organizationId], ct);
-        return counts.TryGetValue(organizationId, out var count)
-            ? new BackupLicenceCheck("Checked", count.Licensed, count.BackedUp, count.Missing, count.ReadOn)
+        if (counts.TryGetValue(organizationId, out var count))
+        {
+            return new BackupLicenceCheck("Checked", count.Licensed, count.BackedUp, count.Missing, count.ReadOn);
+        }
+
+        // Without Partner Center, CloudAlly's own mark on each mailbox: the same count the coverage rule takes.
+        var marked = await licences.MarkedAsync([organizationId], ct);
+        return marked.TryGetValue(organizationId, out var mark)
+            ? new BackupLicenceCheck("Marked", mark.Licensed, mark.BackedUp, mark.Missing, null)
             : new BackupLicenceCheck("NoData", null, 0, null, null);
     }
 

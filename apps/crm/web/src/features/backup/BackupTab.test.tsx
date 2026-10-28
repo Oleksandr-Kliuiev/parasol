@@ -128,6 +128,19 @@ describe('The Sikkerhetskopi tab (M42)', () => {
     scrolled.mockRestore();
   });
 
+  it('counts by CloudAlly’s own mark when Partner Center has no licence data, and says whose count it is', async () => {
+    stub(overview({ licences: { state: 'Marked', licensed: 10, backedUp: 2, missing: 8, readOn: null } }));
+    const missing = render();
+    expect(await screen.findByText('8 mailboxes that CloudAlly marks as licensed are not in the backup: 10 licensed, 2 in backup. ' +
+      'They are listed below under Need attention. Partner Center has no licence data for this customer, so this is CloudAlly’s count.')).toBeVisible();
+    missing.unmount();
+
+    stub(overview({ licences: { state: 'Marked', licensed: 3, backedUp: 3, missing: 0, readOn: null } }));
+    render();
+    expect(await screen.findByText(
+      'All 3 mailboxes CloudAlly marks as licensed are in the backup (CloudAlly’s count: Partner Center has no licence data for this customer).')).toBeVisible();
+  });
+
   it('says when Partner Center has no licence data, when a linked account was not read yet, and when none is linked', async () => {
     stub(overview({ licences: { state: 'NoData', licensed: null, backedUp: 2, missing: null, readOn: null } }));
     const first = render();
@@ -199,6 +212,9 @@ describe('Backup gaps in the alert queue (M42)', () => {
     expect(alertTitle(i18n.t, gap)).toBe('Mail: the CloudAlly backup failed for 1 of 2 (Fjord IT AS)');
     expect(alertTitle(i18n.t, { ...gap, rule: 'cloudally.user-not-backed-up', facts: { licensed: '4', backedUp: '3', missing: '1' } }))
       .toBe('1 licensed Microsoft 365 user has no mailbox backup (4 licensed, 3 in backup)');
+    // Without Partner Center, CloudAlly's own mark counted it.
+    expect(alertTitle(i18n.t, { ...gap, rule: 'cloudally.user-not-backed-up', facts: { licensed: '10', backedUp: '2', missing: '8', by: 'cloudally' } }))
+      .toBe('8 mailboxes CloudAlly marks as licensed are not in the backup (10 licensed, 2 in backup)');
     expect(alertTitle(i18n.t, { ...gap, rule: 'cloudally.backup-paused', facts: { service: 'SharePoint', whole: 'true', account: 'Fjord IT AS' } }))
       .toBe('SharePoint: the CloudAlly backup is paused (Fjord IT AS)');
   });

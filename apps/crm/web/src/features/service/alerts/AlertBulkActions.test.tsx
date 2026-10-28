@@ -48,7 +48,7 @@ const bar = () => screen.getByRole('region', { name: 'Selected alerts' });
 afterEach(() => vi.unstubAllGlobals());
 
 describe('alert queue: source and age (M45)', () => {
-  it('narrows by source and age in the address and the request, and clears them with the other filters', async () => {
+  it('narrows by source and age in the address and the request, one age at a time, and clears them with the other filters', async () => {
     const fetch = stub();
     const { router } = render();
     await screen.findByRole('table', { name: 'Alerts' });
@@ -56,8 +56,14 @@ describe('alert queue: source and age (M45)', () => {
     await userEvent.click(screen.getByRole('option', { name: 'Atera' }));
     await waitFor(() => expect(router.state.location.search).toBe('?source=atera'));
     await userEvent.click(screen.getByRole('combobox', { name: 'Age' }));
+    // What is new, then what is old.
     expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(
-      ['Any age', 'Older than 7 days', 'Older than 30 days', 'Older than 90 days', 'Older than a year']);
+      ['Any age', 'Last 24 hours', 'Last 7 days', 'Older than 7 days', 'Older than 30 days', 'Older than 90 days', 'Older than a year']);
+    await userEvent.click(screen.getByRole('option', { name: 'Last 24 hours' }));
+    await waitFor(() => expect(router.state.location.search).toBe('?source=atera&newerThan=1'));
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => String(url))).toContain('/api/v1/service/alerts?system=atera&newerThanDays=1&limit=25'));
+    // An old age replaces the new one: the queue never asks for both.
+    await userEvent.click(screen.getByRole('combobox', { name: 'Age' }));
     await userEvent.click(screen.getByRole('option', { name: 'Older than 90 days' }));
     await waitFor(() => expect(router.state.location.search).toBe('?source=atera&olderThan=90'));
     await waitFor(() => expect(fetch.mock.calls.map(([url]) => String(url))).toContain('/api/v1/service/alerts?system=atera&olderThanDays=90&limit=25'));
@@ -72,6 +78,21 @@ describe('alert queue: source and age (M45)', () => {
     stub(); render('/alerts?olderThan=45');
     await screen.findByRole('table', { name: 'Alerts' });
     expect(screen.getByRole('combobox', { name: 'Age' })).toHaveTextContent('Older than 45 days');
+  });
+
+  it('offers a new age the address names, and reads it as the queue asks for it', async () => {
+    const fetch = stub(); render('/alerts?newerThan=3');
+    await screen.findByRole('table', { name: 'Alerts' });
+    expect(screen.getByRole('combobox', { name: 'Age' })).toHaveTextContent('Last 3 days');
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => String(url))).toContain('/api/v1/service/alerts?newerThanDays=3&limit=25'));
+  });
+
+  it('reads an address that names both ages by the old one, as the age filter shows it', async () => {
+    const fetch = stub(); render('/alerts?olderThan=45&newerThan=1');
+    await screen.findByRole('table', { name: 'Alerts' });
+    expect(screen.getByRole('combobox', { name: 'Age' })).toHaveTextContent('Older than 45 days');
+    await waitFor(() => expect(fetch.mock.calls.map(([url]) => String(url))).toContain('/api/v1/service/alerts?olderThanDays=45&limit=25'));
+    expect(fetch.mock.calls.map(([url]) => String(url)).filter((url) => url.includes('newerThanDays'))).toEqual([]);
   });
 });
 

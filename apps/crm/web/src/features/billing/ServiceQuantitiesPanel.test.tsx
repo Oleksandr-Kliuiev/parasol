@@ -19,8 +19,9 @@ const quantities = (withMoney: boolean): ServiceQuantities => ({
       lines: [{ contractId: 'c1', contractNumber: 'K-1001', lineId: 'l1', productName: 'Huntress per agent', deviceFilter: null, estimate: 3, billed: 21,
         validFrom: '2026-01-01', validTo: null }], billLines: [] },
     { model: 'PerBackupSeat', source: 'cloudally', count: 14, detail: null, readOn: '2026-10-18', stale: true, status: 'NoReading', lines: [],
-      billLines: [{ day: '2026-10-18', account: 'acc-1', accountName: 'Fjord IT AS', service: 'Exchange', source: 'MS365', seats: 14, accounts: 14,
-        ...(withMoney ? { price: 2.5, total: 35 } : {}), currency: 'EUR' }] },
+      // As CloudAlly words a line billed per user: no seats, the users in accounts; the server counts them as the basis does.
+      billLines: [{ day: '2026-10-18', account: 'acc-1', accountName: 'Fjord IT AS', service: 'Exchange', source: 'MS365', seats: 0, accounts: 14,
+        users: 14, ...(withMoney ? { price: 2.5, total: 35 } : {}), currency: 'EUR' }] },
   ],
 });
 
@@ -46,6 +47,9 @@ describe('ServiceQuantitiesPanel (M43)', () => {
     const bill = within(panel).getByRole('table', { name: 'What CloudAlly bills' });
     expect(within(bill).queryByRole('columnheader', { name: 'Account' })).toBeNull();
     expect(within(bill).getByRole('columnheader', { name: 'Total' })).toBeInTheDocument();
+    // The users the line bills, never CloudAlly's seat count of zero.
+    expect(within(bill).getByRole('cell', { name: '14' })).toBeInTheDocument();
+    expect(within(bill).queryByRole('cell', { name: '0' })).toBeNull();
   });
 
   it('names the account in each row when the customer has more than one', async () => {

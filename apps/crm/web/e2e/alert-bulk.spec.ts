@@ -112,9 +112,9 @@ test('all alerts that match are hidden until a day with one reason across pages 
   await page.getByRole('group', { name: 'Show' }).getByRole('button', { name: 'Hidden', exact: true }).click();
   await expect(page).toHaveURL(/[?&]state=hidden/);
   await expect(page.getByText('Showing 25 of 26')).toBeVisible();
-  // The oldest first, as in the open list: the first page starts with the alert raised longest ago.
-  await page.getByRole('button', { name: `${m} OID toner 25 below threshold`, exact: true }).click();
-  const panel = page.getByRole('dialog', { name: `${m} OID toner 25 below threshold`, exact: true });
+  // The newest first, as in the open list: the first page starts with the alert raised last.
+  await page.getByRole('button', { name: `${m} OID toner 00 below threshold`, exact: true }).click();
+  const panel = page.getByRole('dialog', { name: `${m} OID toner 00 below threshold`, exact: true });
   await expect(panel.getByText(/Hidden until .* by .*: “The toner is ordered for every printer”/)).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(panel).toHaveCount(0);

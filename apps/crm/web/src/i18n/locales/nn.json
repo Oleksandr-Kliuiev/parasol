@@ -340,9 +340,9 @@
     "alerts": {
       "title": "Driftsvarsel som hastar",
       "refresh": "Oppdater driftsvarsel som hastar",
-      "shownSome": "{{shown}} av {{total}} opne driftsvarsel, dei mest alvorlege og eldste først",
+      "shownSome": "{{shown}} av {{total}} opne driftsvarsel, dei mest alvorlege og nyaste først",
       "shownAll_one": "{{count}} ope driftsvarsel",
-      "shownAll_other": "{{count}} opne driftsvarsel, dei mest alvorlege og eldste først",
+      "shownAll_other": "{{count}} opne driftsvarsel, dei mest alvorlege og nyaste først",
       "all": "Alle opne driftsvarsel ({{count}})",
       "empty": "Ingen opne driftsvarsel.",
       "emptyNotRead": "Driftsvarsla blir viste her etter første lesing.",
@@ -1758,7 +1758,7 @@
   },
   "alerts": {
     "title": "Driftsvarsel",
-    "subtitle": "Opne driftsvarsel for alle kundar: dei kritiske først, deretter dei som har venta lengst.",
+    "subtitle": "Opne driftsvarsel for alle kundar: dei kritiske først, deretter dei nyaste.",
     "subtitleResolved": "Driftsvarsel som kjelda ikkje lenger melder som opne, dei sist løyste først.",
     "subtitleHidden": "Driftsvarsel som er skjulte i Parasoll til ein dato; dei er framleis opne i kjelda.",
     "refresh": "Oppdater driftsvarsel",
@@ -1781,6 +1781,8 @@
     "olderThan_one": "Eldre enn {{count}} dag",
     "olderThan_other": "Eldre enn {{count}} dagar",
     "olderThanYear": "Eldre enn eitt år",
+    "newerThan_one": "Siste 24 timar",
+    "newerThan_other": "Siste {{count}} dagar",
     "clearFilters": "Fjern filtera",
     "totals_one": "{{count}} driftsvarsel: {{critical}} kritiske, {{warning}} åtvaringar",
     "totals_other": "{{count}} driftsvarsel: {{critical}} kritiske, {{warning}} åtvaringar",
@@ -1835,7 +1837,9 @@
       },
       "userNotBackedUp": {
         "title_one": "{{count}} lisensiert Microsoft 365-brukar har ikkje e-posten i tryggingskopi ({{licensed}} lisensierte, {{backedUp}} i kopi)",
-        "title_other": "{{count}} lisensierte Microsoft 365-brukarar har ikkje e-posten i tryggingskopi ({{licensed}} lisensierte, {{backedUp}} i kopi)"
+        "title_other": "{{count}} lisensierte Microsoft 365-brukarar har ikkje e-posten i tryggingskopi ({{licensed}} lisensierte, {{backedUp}} i kopi)",
+        "marked_one": "{{count}} postboks som CloudAlly merkjer som lisensiert, er ikkje i tryggingskopien ({{licensed}} lisensierte, {{backedUp}} i kopi)",
+        "marked_other": "{{count}} postboksar som CloudAlly merkjer som lisensierte, er ikkje i tryggingskopien ({{licensed}} lisensierte, {{backedUp}} i kopi)"
       }
     },
     "reads": {
@@ -2157,7 +2161,7 @@
       },
       "userNotBackedUp": {
         "name": "Lisensiert brukar utan tryggingskopi",
-        "description": "Ei åtvaring når fleire av brukarane til kunden har ein Microsoft 365-lisens med postboks (Partner Center) enn det er postboksar i tryggingskopien i CloudAlly. Kundar utan lisensdata blir ikkje kontrollerte, og fana Tryggingskopi seier det.",
+        "description": "Ei åtvaring når fleire av brukarane til kunden har ein Microsoft 365-lisens med postboks (Partner Center) enn det er postboksar i tryggingskopien i CloudAlly. Ein kunde utan lisensdata blir i staden kontrollert etter CloudAlly si eiga merking: postboksar han merkjer som lisensierte, som ikkje er i tryggingskopien.",
         "when": "Blir kontrollert etter kvar fullstendige lesing av CloudAlly, kvar andre time."
       }
     },
@@ -5616,7 +5620,11 @@
       "missing_one": "{{count}} lisensiert brukar har ikkje e-posten i tryggingskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
       "missing_other": "{{count}} lisensierte brukarar har ikkje e-posten i tryggingskopien: {{licensed}} lisensierte, {{backedUp}} i kopi (Partner Center, {{date}}).",
       "allIn_one": "Den lisensierte brukaren har e-posten i tryggingskopien (Partner Center, {{date}}).",
-      "allIn_other": "Alle {{count}} lisensierte brukarane har e-posten i tryggingskopien (Partner Center, {{date}})."
+      "allIn_other": "Alle {{count}} lisensierte brukarane har e-posten i tryggingskopien (Partner Center, {{date}}).",
+      "markedMissing_one": "{{count}} postboks som CloudAlly merkjer som lisensiert, er ikkje i tryggingskopien: {{licensed}} lisensierte, {{backedUp}} i kopi. Han står nedanfor under Treng tiltak. Partner Center har ingen lisensdata for denne kunden, så dette er teljinga til CloudAlly.",
+      "markedMissing_other": "{{count}} postboksar som CloudAlly merkjer som lisensierte, er ikkje i tryggingskopien: {{licensed}} lisensierte, {{backedUp}} i kopi. Dei står nedanfor under Treng tiltak. Partner Center har ingen lisensdata for denne kunden, så dette er teljinga til CloudAlly.",
+      "markedAllIn_one": "Postboksen som CloudAlly merkjer som lisensiert, er i tryggingskopien (teljinga til CloudAlly: Partner Center har ingen lisensdata for denne kunden).",
+      "markedAllIn_other": "Alle {{count}} postboksane som CloudAlly merkjer som lisensierte, er i tryggingskopien (teljinga til CloudAlly: Partner Center har ingen lisensdata for denne kunden)."
     },
     "tasks": {
       "title": "Tenester i CloudAlly"

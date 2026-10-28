@@ -28,6 +28,8 @@ export interface ServiceBillLine {
   source: string;
   seats: number | null;
   accounts: number | null;
+  /** How many users the line bills, as the billing basis counts them: seats where the plan sells seats, else accounts. */
+  users: number | null;
   price?: number | null;
   total?: number | null;
   currency: string | null;

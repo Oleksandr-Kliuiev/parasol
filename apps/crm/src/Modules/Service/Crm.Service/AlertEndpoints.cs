@@ -38,16 +38,18 @@ internal static class AlertEndpoints
         // M38: one list for a customer's tab and the queue across customers; organizationId narrows it to one customer.
         group.MapGet("/alerts", async (
                 Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, string? cursor, int? limit, bool? hidden,
-                string? system, int? olderThanDays, AlertQueries alerts, CancellationToken ct) =>
-                (await alerts.ListAsync(new AlertFilter(organizationId, state, hidden == true, severity, deviceId, q, system, olderThanDays), cursor, limit, ct))
+                string? system, int? olderThanDays, int? newerThanDays, AlertQueries alerts, CancellationToken ct) =>
+                (await alerts.ListAsync(
+                    new AlertFilter(organizationId, state, hidden == true, severity, deviceId, q, system, olderThanDays, newerThanDays), cursor, limit, ct))
                     .ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ServiceRead);
 
         // M45: "all that match" the queue's filters, for a bulk action: at most 500, in the queue's order, with how many matched.
         group.MapGet("/alerts/selection", async (
                 Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? q, bool? hidden, string? system, int? olderThanDays,
-                AlertQueries alerts, CancellationToken ct) =>
-                (await alerts.SelectAsync(new AlertFilter(organizationId, state, hidden == true, severity, deviceId, q, system, olderThanDays), ct))
+                int? newerThanDays, AlertQueries alerts, CancellationToken ct) =>
+                (await alerts.SelectAsync(
+                    new AlertFilter(organizationId, state, hidden == true, severity, deviceId, q, system, olderThanDays, newerThanDays), ct))
                     .ToHttpResult(Results.Ok))
             .RequirePermission(Permissions.ServiceWrite);
 

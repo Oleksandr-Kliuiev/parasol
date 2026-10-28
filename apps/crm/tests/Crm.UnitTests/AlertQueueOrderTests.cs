@@ -5,7 +5,10 @@ using Crm.SharedKernel.Application;
 
 namespace Crm.UnitTests;
 
-/// <summary>M38: the alert list's two orders, open (critical first, then the oldest) and resolved, refuse each other's cursors.</summary>
+/// <summary>
+/// M38: the alert list's two orders, open (critical first, then the newest) and resolved, refuse each other's cursors, and the open
+/// order refuses the cursors of its earlier, oldest-first form.
+/// </summary>
 public sealed class AlertQueueOrderTests
 {
     [Fact]
@@ -16,7 +19,7 @@ public sealed class AlertQueueOrderTests
         resolved.Resolve(DateTimeOffset.Parse("2026-10-21T09:00:00Z"));
 
         var openCursor = AlertOrder.Cursor(open, resolved: false);
-        (openCursor.SortKey, openCursor.Then).ShouldBe(("1", open.CreatedAtSource.ToString("O")));
+        (openCursor.SortKey, openCursor.Then).ShouldBe(("n1", open.CreatedAtSource.ToString("O")));
         AlertOrder.TryRead(openCursor, resolved: false, out var key).ShouldBeTrue();
         key.ShouldBe((1, open.CreatedAtSource));
         AlertOrder.TryRead(openCursor, resolved: true, out _).ShouldBeFalse();
@@ -30,7 +33,9 @@ public sealed class AlertQueueOrderTests
         // The cursor of the order before M38 (newest first by the source's time) belongs to neither.
         var before = new KeysetCursor(open.CreatedAtSource.ToString("O"), open.Id);
         AlertOrder.TryRead(before, resolved: false, out _).ShouldBeFalse();
-        AlertOrder.TryRead(new KeysetCursor("7", open.Id, open.CreatedAtSource.ToString("O")), resolved: false, out _).ShouldBeFalse();
+        AlertOrder.TryRead(new KeysetCursor("n7", open.Id, open.CreatedAtSource.ToString("O")), resolved: false, out _).ShouldBeFalse();
+        // Nor does one of the oldest-first order (until 28.10.2026): its rank without the mark would page the new order wrongly.
+        AlertOrder.TryRead(new KeysetCursor("1", open.Id, open.CreatedAtSource.ToString("O")), resolved: false, out _).ShouldBeFalse();
     }
 
     private static Alert Stored(AlertSeverity severity) => Crm.Service.Domain.Alert.Open("atera", AlertKind.Monitoring,

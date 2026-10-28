@@ -127,7 +127,7 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task The_queue_filters_and_counts_before_the_page_and_pages_critical_first_then_oldest_across_customers()
+    public async Task The_queue_filters_and_counts_before_the_page_and_pages_critical_first_then_newest_across_customers()
     {
         var (system, organizationId, marker) = await ScenarioAsync();
         var admin = factory.ClientAs(CrmRoles.Admin);
@@ -159,11 +159,11 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         pages.Select(a => a.GetProperty("externalId").GetString()).ShouldBe(
             mine.Where(a => a.ExternalId is not ("a00" or "a01")).Select(a => a.ExternalId), ignoreOrder: true);
         pages.Select(a => a.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(28, "every alert once, ties at an instant included");
-        // The order to look at them in, across pages: every critical alert before any warning, and the oldest first within each.
+        // The order to look at them in, across pages: every critical alert before any warning, and the newest first within each.
         pages.Zip(pages.Skip(1)).ShouldAllBe(pair => Rank(pair.First) < Rank(pair.Second) ||
-            (Rank(pair.First) == Rank(pair.Second) && pair.First.GetProperty("createdAt").GetDateTimeOffset() <= pair.Second.GetProperty("createdAt").GetDateTimeOffset()));
+            (Rank(pair.First) == Rank(pair.Second) && pair.First.GetProperty("createdAt").GetDateTimeOffset() >= pair.Second.GetProperty("createdAt").GetDateTimeOffset()));
         pages.TakeWhile(a => Rank(a) == 0).Count().ShouldBe(9);
-        first.GetProperty("items")[0].GetProperty("externalId").GetString().ShouldBe("a03", "the oldest open critical alert leads");
+        first.GetProperty("items")[0].GetProperty("externalId").GetString().ShouldBe("a27", "the newest open critical alert leads");
 
         // Resolved alerts newest resolved first: a01 and a00 resolved together (the id breaks the tie), then a later one on top.
         await ApplyAsync(Complete(system, [.. mine.Where(a => a.ExternalId is not ("a00" or "a01" or "a29")), .. theirs]));
@@ -199,24 +199,24 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task The_urgent_list_starts_with_the_oldest_critical_alerts_and_counts_every_open_alert()
+    public async Task The_urgent_list_starts_with_the_newest_critical_alerts_and_counts_every_open_alert()
     {
         var (system, organizationId, marker) = await ScenarioAsync();
-        // Older than anything else the tests store, so these lead the list whatever other classes add meanwhile.
-        var old = new DateTimeOffset(1990, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        // Newer than anything else the tests store, so these lead the list whatever other classes add meanwhile.
+        var late = new DateTimeOffset(2100, 1, 1, 0, 0, 0, TimeSpan.Zero);
         await ApplyAsync(Complete(system,
-            Source(marker, "resolved", organizationId, createdAt: old.AddYears(-10)),
-            Source(marker, "critical-newer", organizationId, createdAt: old.AddDays(1)),
-            Source(marker, "critical-oldest", organizationId, createdAt: old),
-            Source(marker, "warning-older", organizationId, severity: AlertSeverity.Warning, createdAt: old.AddYears(-5)),
-            Source(marker, "w1", organizationId, severity: AlertSeverity.Warning, createdAt: old.AddYears(-4)),
-            Source(marker, "w2", organizationId, severity: AlertSeverity.Warning, createdAt: old.AddYears(-3)),
-            Source(marker, "w3", organizationId, severity: AlertSeverity.Warning, createdAt: old.AddYears(-2))));
-        await ApplyAsync(new AlertSnapshot(system, AlertKind.Monitoring, [], ["critical-newer", "critical-oldest", "warning-older", "w1", "w2", "w3"], IsComplete: true));
+            Source(marker, "resolved", organizationId, createdAt: late.AddYears(10)),
+            Source(marker, "critical-older", organizationId, createdAt: late.AddDays(-1)),
+            Source(marker, "critical-newest", organizationId, createdAt: late),
+            Source(marker, "warning-newer", organizationId, severity: AlertSeverity.Warning, createdAt: late.AddYears(5)),
+            Source(marker, "w1", organizationId, severity: AlertSeverity.Warning, createdAt: late.AddYears(4)),
+            Source(marker, "w2", organizationId, severity: AlertSeverity.Warning, createdAt: late.AddYears(3)),
+            Source(marker, "w3", organizationId, severity: AlertSeverity.Warning, createdAt: late.AddYears(2))));
+        await ApplyAsync(new AlertSnapshot(system, AlertKind.Monitoring, [], ["critical-older", "critical-newest", "warning-newer", "w1", "w2", "w3"], IsComplete: true));
 
         var reader = factory.ClientAs(CrmRoles.Technician, userKey: "m38-urgent");
         var urgent = await reader.GetFromJsonAsync<JsonElement>($"{Alerts}/urgent?limit=2", Ct);
-        urgent.GetProperty("items").EnumerateArray().Select(a => a.GetProperty("externalId").GetString()).ShouldBe(["critical-oldest", "critical-newer"]);
+        urgent.GetProperty("items").EnumerateArray().Select(a => a.GetProperty("externalId").GetString()).ShouldBe(["critical-newest", "critical-older"]);
         urgent.GetProperty("items")[0].GetProperty("organizationName").GetString().ShouldBe($"{marker} Varsel AS");
         urgent.GetProperty("totalCount").GetInt32().ShouldBeGreaterThanOrEqualTo(6);
         (urgent.GetProperty("critical").GetInt32() + urgent.GetProperty("warning").GetInt32()).ShouldBe(urgent.GetProperty("totalCount").GetInt32());
@@ -228,10 +228,10 @@ public sealed class AlertLifecycleSqlTests(CrmWebFactory factory)
         var items = five.GetProperty("items").EnumerateArray().ToList();
         items.Count.ShouldBe(5, "five by default");
         items.ShouldAllBe(a => a.GetProperty("state").GetString() == "Open");
-        // Critical before warning, and within a severity the oldest first, whatever else is open.
+        // Critical before warning, and within a severity the newest first, whatever else is open.
         items.Zip(items.Skip(1)).ShouldAllBe(pair =>
             Rank(pair.First) < Rank(pair.Second) ||
-            (Rank(pair.First) == Rank(pair.Second) && pair.First.GetProperty("createdAt").GetDateTimeOffset() <= pair.Second.GetProperty("createdAt").GetDateTimeOffset()));
+            (Rank(pair.First) == Rank(pair.Second) && pair.First.GetProperty("createdAt").GetDateTimeOffset() >= pair.Second.GetProperty("createdAt").GetDateTimeOffset()));
     }
 
     [Fact]

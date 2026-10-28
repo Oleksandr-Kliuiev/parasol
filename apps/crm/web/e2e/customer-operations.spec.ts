@@ -2,7 +2,7 @@ import { expect, test, type Locator } from '@playwright/test';
 import { ateraAgent, ateraAlert, fitsWidth, linkedAteraCustomer, settled, syncAlerts, syncDevices, widths } from './atera';
 import { signIn } from './support';
 
-// M38: the customer's Drift tab reads what the worker stored from the Atera stand-in: open alerts critical first and the oldest
+// M38: the customer's Drift tab reads what the worker stored from the Atera stand-in: open alerts critical first and the newest
 // first, the devices with their open alerts, then tickets and ticket requests. Old ?tab=service links still open it.
 test('the Drift tab lists a customer’s open alerts first, then its devices with their open alerts', { tag: '@critical' }, async ({ page }, testInfo) => {
   test.setTimeout(240_000);
@@ -12,7 +12,7 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
   await ateraAgent(page, customer, { MachineName: server, OSType: 'Server', OS: 'Windows Server 2022' });
   await ateraAgent(page, customer, { MachineName: `PC-${customer.marker}`, OSType: 'Work Station', OS: 'Windows 11 Pro', Online: false });
   await syncDevices(page, customer, 2);
-  // The warning waited longer, but a critical alert comes first; within a severity the oldest comes first.
+  // The warning is older, but a critical alert comes first; within a severity the newest comes first.
   await ateraAlert(page, customer, { Title: `${customer.marker} backup is late`, Severity: 'Warning', DeviceName: server, hoursAgo: 30 });
   await ateraAlert(page, customer, { Title: `${customer.marker} disk almost full`, Severity: 'Critical', DeviceName: server, hoursAgo: 3 });
   await ateraAlert(page, customer, { Title: `${customer.marker} service stopped`, Severity: 'Critical', DeviceName: server, hoursAgo: 6 });
@@ -29,7 +29,7 @@ test('the Drift tab lists a customer’s open alerts first, then its devices wit
   await expect(main.getByRole('heading', { level: 2 })).toHaveText(['Saved service data', 'Open alerts', 'Devices', 'Security', 'Tickets', 'Ticket requests']);
   const alerts = page.getByRole('region', { name: 'Open alerts', exact: true });
   await expect(alerts.getByRole('listitem')).toHaveText([
-    new RegExp(`${customer.marker} service stopped.*Critical`), new RegExp(`${customer.marker} disk almost full.*Critical`),
+    new RegExp(`${customer.marker} disk almost full.*Critical`), new RegExp(`${customer.marker} service stopped.*Critical`),
     new RegExp(`${customer.marker} backup is late.*Warning`)]);
   await expect(alerts.getByRole('listitem').first().locator('time')).toHaveAttribute('datetime', /T/);
   await expect(alerts.getByRole('button', { name: `Assign ${customer.marker} disk almost full`, exact: true })).toBeVisible();

@@ -343,12 +343,12 @@ public sealed class ListCompletenessTests(CrmWebFactory factory)
         listedAlerts.Select(a => a.Item.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(230);
         listedAlerts.Count.ShouldBe(230);
         listedAlerts[0].Total.ShouldBe(230);
-        // M38: critical first, then the oldest, across pages (ten alerts share each instant, the id breaks the tie).
+        // M38: critical first, then the newest, across pages (ten alerts share each instant, the id breaks the tie).
         static int Rank(JsonElement alert) => alert.GetProperty("severity").GetString() == "Critical" ? 0 : 1;
         listedAlerts.Zip(listedAlerts.Skip(1)).Select(pair => Rank(pair.First.Item) < Rank(pair.Second.Item) ||
                 (Rank(pair.First.Item) == Rank(pair.Second.Item) &&
-                 pair.First.Item.GetProperty("createdAt").GetDateTimeOffset() <= pair.Second.Item.GetProperty("createdAt").GetDateTimeOffset()))
-            .ShouldAllBe(inOrder => inOrder, "critical alerts come first and the oldest first within a severity, across pages");
+                 pair.First.Item.GetProperty("createdAt").GetDateTimeOffset() >= pair.Second.Item.GetProperty("createdAt").GetDateTimeOffset()))
+            .ShouldAllBe(inOrder => inOrder, "critical alerts come first and the newest first within a severity, across pages");
         (await ItemsAsync(admin, $"/api/v1/service/alerts?organizationId={organizationId}&severity=Critical", 50)).Count.ShouldBe(115);
         (await admin.GetFromJsonAsync<JsonElement>($"/api/v1/service/alerts?organizationId={organizationId}&limit=500", Ct))
             .GetProperty("items").GetArrayLength().ShouldBe(100, "a page holds at most 100 alerts");

@@ -27,7 +27,7 @@ export interface UrgentAlert {
   sourceClosedAt?: string | null;
 }
 
-/** The most severe open alerts, oldest first, out of `totalCount` open ones; the counts cover every open alert. */
+/** The most severe open alerts, newest first, out of `totalCount` open ones; the counts cover every open alert. */
 export interface UrgentAlerts {
   items: UrgentAlert[];
   totalCount: number;

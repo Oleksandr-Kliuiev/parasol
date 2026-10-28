@@ -45,7 +45,11 @@ const severityParam: Record<string, AlertSeverity> = { critical: 'Critical', war
  */
 const sources = ['atera', 'huntress', 'parasoll'] as const;
 
-/** M45: the ages offered, in days; another number in the address (`?olderThan=45`) is offered beside them. */
+/**
+ * The ages offered, in days: what is new (`?newerThan=1`) and, from M45, what is old (`?olderThan=90`); another number in the
+ * address is offered beside them. One age at a time: choosing one drops the other.
+ */
+const newAges = [1, 7] as const;
 const ages = [7, 30, 90, 365] as const;
 
 /** The most alerts one bulk action takes, as the server answers "all that match". */
@@ -56,7 +60,7 @@ const ageParam = (value: string | null) => {
   return value !== null && Number.isInteger(days) && days >= 1 && days <= 3650 ? days : null;
 };
 
-/** Alerts across customers (M38, Work → Alerts): one queue to look at the most severe and longest waiting first. */
+/** Alerts across customers (M38, Work → Alerts): one queue to look at the most severe and newest first. */
 export function AlertQueuePage() {
   const user = useCurrentUser();
   const canService = useCan(Permissions.serviceRead);
@@ -77,10 +81,13 @@ function Queue() {
   // M45: the source as stored and an age; both live in the address like the other filters.
   const system = params.get('source');
   const olderThanDays = ageParam(params.get('olderThan'));
-  const filters = { state, severity, organizationId, search: debounced, system, olderThanDays } as const;
+  // One age at a time: an address that names both is read by its old one, as the age filter shows it.
+  const newerThanDays = olderThanDays === null ? ageParam(params.get('newerThan')) : null;
+  const filters = { state, severity, organizationId, search: debounced, system, olderThanDays, newerThanDays } as const;
   const queue = useAlertQueue(filters);
   const links = useAlertTaskLinks(pageIds(queue.pages));
-  const filtered = severity !== null || organizationId !== null || debounced !== '' || system !== null || olderThanDays !== null;
+  const filtered = severity !== null || organizationId !== null || debounced !== '' || system !== null || olderThanDays !== null ||
+    newerThanDays !== null;
   // While another search or filter is read, the previous rows stay where they are, so a click on one still lands. They are not its
   // answer: the count line says the queue is loading, and no count, end of list or empty answer is claimed for them.
   const stale = queue.isPlaceholderData;
@@ -130,10 +137,20 @@ function Queue() {
   const clear = () => {
     setSearch('');
     const next = new URLSearchParams(params);
-    for (const key of ['severity', 'customer', 'source', 'olderThan']) next.delete(key);
+    for (const key of ['severity', 'customer', 'source', 'olderThan', 'newerThan']) next.delete(key);
     setParams(next, { replace: true });
   };
   const ageLabel = (days: number) => days === 365 ? t('alerts.olderThanYear') : t('alerts.olderThan', { count: days });
+  // An option's value names its direction and its days.
+  const age = olderThanDays ? `older-${olderThanDays}` : newerThanDays ? `newer-${newerThanDays}` : '';
+  const ageText = olderThanDays ? ageLabel(olderThanDays) : newerThanDays ? t('alerts.newerThan', { count: newerThanDays }) : t('alerts.anyAge');
+  const setAge = (value: string) => {
+    const [direction, days] = value.split('-');
+    const next = new URLSearchParams(params);
+    next.delete('olderThan'); next.delete('newerThan');
+    if (days) next.set(direction === 'newer' ? 'newerThan' : 'olderThan', days);
+    setParams(next, { replace: true });
+  };
 
   const total = queue.total;
   const empty = <AlertQueueEmpty
@@ -176,11 +193,12 @@ function Queue() {
         </Dropdown>
       </FilterField>
       <FilterField label={t('alerts.ageLabel')}>
-        <Dropdown value={olderThanDays ? ageLabel(olderThanDays) : t('alerts.anyAge')} selectedOptions={[olderThanDays ? String(olderThanDays) : '']}
-          onOptionSelect={(_, d) => setParam('olderThan', d.optionValue || null)}>
+        <Dropdown value={ageText} selectedOptions={[age]} onOptionSelect={(_, d) => setAge(d.optionValue ?? '')}>
           <Option value="">{t('alerts.anyAge')}</Option>
+          {[...new Set<number>([...newAges, ...(newerThanDays ? [newerThanDays] : [])])].sort((a, b) => a - b).map((days) =>
+            <Option key={`newer-${days}`} value={`newer-${days}`}>{t('alerts.newerThan', { count: days })}</Option>)}
           {[...new Set<number>([...ages, ...(olderThanDays ? [olderThanDays] : [])])].sort((a, b) => a - b).map((days) =>
-            <Option key={days} value={String(days)}>{ageLabel(days)}</Option>)}
+            <Option key={`older-${days}`} value={`older-${days}`}>{ageLabel(days)}</Option>)}
         </Dropdown>
       </FilterField>
     </Toolbar>

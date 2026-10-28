@@ -162,7 +162,7 @@ function BillLines({ lines, counted }: { lines: ServiceBillLine[]; counted: numb
             <TableRow key={`${line.account}-${line.source}-${line.service ?? ''}-${index}`}>
               {accounts.length > 1 && <TableCell>{line.accountName ?? line.account}</TableCell>}
               <TableCell>{line.service ?? line.source}</TableCell>
-              <TableCell className={styles.number}>{line.seats ?? line.accounts ?? '—'}</TableCell>
+              <TableCell className={styles.number}>{line.users ?? '—'}</TableCell>
               {canSeeCost && <TableCell className={styles.number}>{line.price == null ? '—' : formatMoney(line.price, line.currency ?? undefined)}</TableCell>}
               {canSeeCost && <TableCell className={styles.number}>{line.total == null ? '—' : formatMoney(line.total, line.currency ?? undefined)}</TableCell>}
             </TableRow>
