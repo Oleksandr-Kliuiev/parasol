@@ -52,11 +52,27 @@ internal abstract class AteraAlertAction(
         }
 
         var organization = (await customers.GetOrganizationNamesAsync([alert.OrganizationId], cancellationToken)).GetValueOrDefault(alert.OrganizationId);
-        // The name a deletion asks to be typed is the alert's title, as the queue shows it.
-        var target = new VendorActionTarget(AteraAlertKinds.TargetType, alert.ExternalId, alert.Title, alert.OrganizationId, organization,
-            alert.ExternalCustomerId, alert.Url);
-        return Plan(alert, target);
+        return Plan(alert, Target(alert, organization));
     }
+
+    /// <summary>
+    /// Many alerts planned in two reads (M45: a batch from the queue): the stored alerts, then their customers' names. An alert the CRM
+    /// does not store is planned as not found, as one asked alone is.
+    /// </summary>
+    protected async Task<IReadOnlyDictionary<string, VendorActionPlan>> PlanManyAlertsAsync(IReadOnlyList<string> targetIds, CancellationToken ct)
+    {
+        var alerts = await service.GetAlertsAsync(AteraTypes.System, targetIds, ct);
+        var names = alerts.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await customers.GetOrganizationNamesAsync(alerts.Values.Select(a => a.OrganizationId).Distinct().ToList(), ct);
+        return targetIds.Distinct(StringComparer.Ordinal).ToDictionary(id => id, id => alerts.TryGetValue(id, out var alert)
+            ? Plan(alert, Target(alert, names.GetValueOrDefault(alert.OrganizationId)))
+            : VendorActionPlan.NotFound, StringComparer.Ordinal);
+    }
+
+    /// <summary>The name a deletion asks to be typed is the alert's title, as the queue shows it.</summary>
+    private static VendorActionTarget Target(AlertRef alert, string? organization) =>
+        new(AteraAlertKinds.TargetType, alert.ExternalId, alert.Title, alert.OrganizationId, organization, alert.ExternalCustomerId, alert.Url);
 
     protected abstract VendorActionPlan Plan(AlertRef alert, VendorActionTarget target);
 
@@ -143,10 +159,16 @@ internal abstract class AteraAlertAction(
         new(code, new Dictionary<string, string?> { ["title"] = alert.Title, ["device"] = string.IsNullOrWhiteSpace(alert.DeviceName) ? "—" : alert.DeviceName });
 }
 
-/// <summary>Resolves an Atera alert (<c>PUT alerts/{id}</c>): it leaves Atera's open list; the CRM's next read resolves it here.</summary>
+/// <summary>
+/// Resolves an Atera alert (<c>PUT alerts/{id}</c>): it leaves Atera's open list; the CRM's next read resolves it here. It may be asked
+/// for many alerts at once (M45: "Close in Atera" for a selection of the queue), one action per alert.
+/// </summary>
 internal sealed class AteraAlertResolveAction(IServiceApi service, ICustomersApi customers, IAteraClient client, ILogger<AteraAlertResolveAction> logger)
-    : AteraAlertAction(service, customers, client, logger)
+    : AteraAlertAction(service, customers, client, logger), IVendorActionBatchPlanner
 {
+    public Task<IReadOnlyDictionary<string, VendorActionPlan>> PlanManyAsync(VendorActionBatchRequest request, CancellationToken cancellationToken) =>
+        PlanManyAlertsAsync(request.TargetIds, cancellationToken);
+
     public override string Kind => AteraAlertKinds.Resolve;
 
     public override VendorActionLevel Level => VendorActionLevel.Standard;

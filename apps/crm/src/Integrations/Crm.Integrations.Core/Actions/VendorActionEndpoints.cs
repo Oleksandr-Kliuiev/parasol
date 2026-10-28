@@ -61,6 +61,35 @@ internal sealed class VendorActionLookupRequestValidator : AbstractValidator<Ven
     }
 }
 
+internal sealed class VendorActionBatchPreviewRequestValidator : AbstractValidator<VendorActionBatchPreviewRequest>
+{
+    public VendorActionBatchPreviewRequestValidator()
+    {
+        RuleFor(x => x.System).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.Kind).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.TargetType).NotEmpty().MaximumLength(64);
+        VendorActionEndpoints.TargetRules(RuleFor(x => x.TargetIds));
+        RuleForEach(x => x.TargetIds).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.Parameters).Must(VendorActionEndpoints.IsParameterObject).WithMessage("Parameters must be a JSON object of at most 16 KB.");
+    }
+}
+
+internal sealed class VendorActionBatchCommandValidator : AbstractValidator<VendorActionBatchCommand>
+{
+    public VendorActionBatchCommandValidator()
+    {
+        RuleFor(x => x.PreviewToken).NotEmpty().MaximumLength(4096);
+        RuleFor(x => x.System).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.Kind).NotEmpty().MaximumLength(64);
+        RuleFor(x => x.TargetType).NotEmpty().MaximumLength(64);
+        VendorActionEndpoints.TargetRules(RuleFor(x => x.TargetIds));
+        RuleForEach(x => x.TargetIds).NotEmpty().MaximumLength(128);
+        RuleFor(x => x.Parameters).Must(VendorActionEndpoints.IsParameterObject).WithMessage("Parameters must be a JSON object of at most 16 KB.");
+        RuleFor(x => x.BatchKey).NotEmpty();
+        RuleFor(x => x.Reason).MaximumLength(VendorActionRules.ReasonMaxLength);
+    }
+}
+
 /// <summary>
 /// <c>/api/v1/actions</c> (M39.1): preview, command (a destructive action through its own endpoint, which demands a fresh sign-in),
 /// the log and the facts beside a list's rows, cancel during the hold and settle an uncertain outcome. Each endpoint lets in the holders of any kind's permission; the
@@ -78,8 +107,16 @@ public static class VendorActionEndpoints
 
     public const int MaxParameterBytes = 16 * 1024;
 
+    /// <summary>A batch names at most 500 targets of up to 128 characters (M45).</summary>
+    public const long MaxBatchBytes = 128 * 1024;
+
     internal static bool IsParameterObject(JsonElement parameters) =>
         parameters.ValueKind == JsonValueKind.Object && parameters.GetRawText().Length <= MaxParameterBytes;
+
+    internal static void TargetRules<T>(IRuleBuilderInitial<T, IReadOnlyList<string>?> targets) =>
+        targets.NotNull()
+            .Must(ids => ids is { Count: > 0 and <= VendorActionBatches.MaxTargets })
+            .WithMessage($"Ask for 1 to {VendorActionBatches.MaxTargets} targets.");
 
     public static IEndpointRouteBuilder MapVendorActionEndpoints(this IEndpointRouteBuilder app)
     {
@@ -150,6 +187,36 @@ public static class VendorActionEndpoints
                 return (await actions.CancelAsync(id, etag, ct)).ToHttpResult(item => WithEtag(http, item, Results.Ok(item)));
             })
             .RequirePermission(RequestPermissions);
+
+        // M45: one preview and one confirmation for many targets of one kind, one action each; destructive kinds never come in a batch.
+        group.MapPost("/batch/preview", async (VendorActionBatchPreviewRequest body, VendorActionBatchService batches, IDataProtectionProvider protection,
+                HttpContext http, CancellationToken ct) =>
+            {
+                NoStore(http);
+                return (await batches.PreviewAsync(body, protection, ct)).ToHttpResult(Results.Ok);
+            })
+            .Validate<VendorActionBatchPreviewRequest>()
+            .WithMetadata(new RequestSizeLimitAttribute(MaxBatchBytes))
+            .RequirePermission(RequestPermissions);
+
+        group.MapPost("/batch", async (VendorActionBatchCommand body, VendorActionBatchService batches, IDataProtectionProvider protection, HttpContext http,
+                CancellationToken ct) =>
+            {
+                NoStore(http);
+                return (await batches.RequestAsync(body, protection, ct)).ToHttpResult(saved => saved.Repeated ? Results.Ok(saved) : Results.Accepted(
+                    saved.BatchId is { } id ? $"/api/v1/actions/batches/{id}" : null, saved));
+            })
+            .Validate<VendorActionBatchCommand>()
+            .WithMetadata(new RequestSizeLimitAttribute(MaxBatchBytes))
+            .RequirePermission(RequestPermissions);
+
+        // M45: a batch as it stands, followed by the dialog that asked for it; with items=true every action of it.
+        group.MapGet("/batches/{id:guid}", async (Guid id, bool? items, VendorActionBatchService batches, HttpContext http, CancellationToken ct) =>
+            {
+                NoStore(http);
+                return (await batches.ReadAsync(id, items == true, ct)).ToHttpResult(Results.Ok);
+            })
+            .RequirePermission(ReadPermissions);
 
         group.MapPost("/{id:guid}/settle", async (Guid id, VendorActionSettlement body, VendorActionService actions, HttpContext http, CancellationToken ct) =>
             {

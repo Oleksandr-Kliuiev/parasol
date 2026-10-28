@@ -45,10 +45,12 @@ public sealed class VendorActionRunner(
             var now = time.GetUtcNow();
             // A paused vendor keeps its actions waiting, like its other outbound operations (runbook 05).
             var paused = await db.IntegrationSwitches.AsNoTracking().Where(s => s.IsPaused).Select(s => s.System).ToListAsync(cancellationToken);
+            // M45: an action asked for alone goes before the actions of a batch, so a reply to a customer never waits for a bulk change.
             due = await db.OutboundOperations.AsNoTracking()
                 .Where(o => o.Status == OutboundStatus.Pending && o.Operation.StartsWith(VendorAction.OperationPrefix) && o.NextAttemptAt <= now &&
                             (o.LockedUntil == null || o.LockedUntil < now) && !paused.Contains(o.System))
-                .OrderBy(o => o.NextAttemptAt).ThenBy(o => o.CreatedAt)
+                .OrderBy(o => db.VendorActions.Any(a => a.OutboundOperationId == o.Id && a.BatchId != null) ? 1 : 0)
+                .ThenBy(o => o.NextAttemptAt).ThenBy(o => o.CreatedAt)
                 .Select(o => o.Id).Take(Batch).ToListAsync(cancellationToken);
         }
 

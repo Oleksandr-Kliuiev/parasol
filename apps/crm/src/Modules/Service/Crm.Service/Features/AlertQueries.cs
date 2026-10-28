@@ -58,6 +58,51 @@ public sealed record AlertSourceRead(string System, DateTimeOffset? StartedAt, b
 /// <summary>The open alerts that waited longest at the highest severity, out of <c>TotalCount</c> open ones.</summary>
 public sealed record UrgentAlerts(IReadOnlyList<AlertListItem> Items, int TotalCount, int Critical, int Warning, IReadOnlyList<AlertSourceRead> Reads);
 
+/// <summary>
+/// What an alert list is narrowed to (M38; M45 adds the source and an age). The queue's page, its counts and "all that match" (the
+/// selection a bulk action takes) read through this one filter, so the count a person sees before a bulk action is the count of
+/// what it takes. <paramref name="State"/> is open unless asked otherwise; <paramref name="Hidden"/> lists what is hidden in Parasoll
+/// now instead. <paramref name="System"/> is the source as stored (<c>atera</c>, <c>huntress</c>, <c>parasoll</c>);
+/// <paramref name="OlderThanDays"/> keeps the alerts their source raised more than that many days ago.
+/// </summary>
+public sealed record AlertFilter(
+    Guid? OrganizationId = null,
+    AlertState? State = null,
+    bool Hidden = false,
+    AlertSeverity? Severity = null,
+    Guid? DeviceId = null,
+    string? Search = null,
+    string? System = null,
+    int? OlderThanDays = null);
+
+/// <summary>
+/// One alert a bulk action may take (M45): what names it in a confirmation and tells it from a namesake (its title, or a gap's rule and
+/// facts, its customer, device, severity and when its source raised it), whether it is hidden now, and the ETag of its status in
+/// Parasoll as read now, which a bulk hide or show sends back.
+/// </summary>
+public sealed record AlertSelectionItem(
+    Guid Id,
+    string System,
+    string ExternalId,
+    string Title,
+    string? DeviceName,
+    Guid OrganizationId,
+    string? OrganizationName,
+    AlertSeverity Severity,
+    AlertState State,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? HiddenUntil,
+    string? Rule,
+    IReadOnlyDictionary<string, string>? Facts,
+    DateTimeOffset? SourceClosedAt,
+    string Etag);
+
+/// <summary>
+/// The alerts a bulk action may take (M45): at most <c>Limit</c> of the <c>TotalCount</c> that match, in the order the list shows
+/// them, so a selection cut by the limit takes the alerts a person would look at first.
+/// </summary>
+public sealed record AlertSelection(IReadOnlyList<AlertSelectionItem> Items, int TotalCount, int Limit);
+
 /// <summary>Alerts across customers (M38): the queue with its filters and the short urgent list for My day.</summary>
 internal sealed class AlertQueries(
     ServiceDbContext db, ICustomersApi customers, IUserDirectory users, IEnumerable<ISyncCompletenessSource> completeness, TimeProvider time)
@@ -66,6 +111,12 @@ internal sealed class AlertQueries(
     public const int MaxLimit = 100;
     public const int UrgentDefaultLimit = 5;
     public const int UrgentMaxLimit = 25;
+
+    /// <summary>The most alerts one bulk action takes (M45): "all that match" stops here and says how many matched.</summary>
+    public const int SelectionLimit = 500;
+
+    /// <summary>The oldest age a filter may ask for: ten years.</summary>
+    public const int MaxAgeDays = 3650;
 
     /// <summary>The runs that read alerts into the CRM, named as the integrations record them (system, job).</summary>
     private static readonly (string System, string Job)[] Sources = [("atera", "atera-alerts"), ("huntress", "huntress-alerts")];
@@ -78,57 +129,122 @@ internal sealed class AlertQueries(
     /// <summary>
     /// Alerts in one state (open unless asked otherwise). Open ones come in the order they should be looked at: critical first, and
     /// within a severity the oldest first; resolved ones newest resolved first. An open list leaves out what is hidden in Parasoll
-    /// now (M40); <paramref name="hidden"/> lists just those, in the open order. Filters narrow the totals as well as the page; the
-    /// cursor carries every sort value, so a cursor of one order is refused by the other.
+    /// now (M40); a hidden list shows just those, in the open order. Filters narrow the totals as well as the page; the cursor
+    /// carries every sort value, so a cursor of one order is refused by the other.
     /// </summary>
-    public async Task<Result<AlertPage>> ListAsync(
-        Guid? organizationId, AlertState? state, AlertSeverity? severity, Guid? deviceId, string? search, string? cursor, int? limit,
-        CancellationToken ct, bool hidden = false)
+    public async Task<Result<AlertPage>> ListAsync(AlertFilter filter, string? cursor, int? limit, CancellationToken ct)
     {
-        if ((state is { } s && !Enum.IsDefined(s)) || (severity is { } v && !Enum.IsDefined(v)) || (hidden && state == AlertState.Resolved))
+        var filtered = Filter(filter, time.GetUtcNow());
+        if (!filtered.IsSuccess)
         {
-            return Error.Validation("SRV_ALERT_FILTER_INVALID", "Unknown alert state or severity.");
+            return filtered.Error!;
         }
 
-        var wanted = state ?? AlertState.Open;
-        var resolved = wanted == AlertState.Resolved;
+        var resolved = IsResolvedList(filter);
         var after = KeysetCursor.Decode(cursor);
         if (cursor is not null && (after is null || !AlertOrder.TryRead(after, resolved, out _)))
         {
             return Error.Validation("SRV_ALERT_CURSOR_INVALID", "The alert page does not belong to this list.");
         }
 
-        var now = time.GetUtcNow();
-        var stored = db.Alerts.AsNoTracking().Include(a => a.Hold);
-        var alerts = hidden ? stored.Where(AlertVisibility.HiddenNow(now))
-            : wanted == AlertState.Open ? stored.Where(AlertVisibility.OpenNow(now))
-            : stored.Where(a => a.State == wanted);
-        if (organizationId is { } organization)
-        {
-            alerts = alerts.Where(a => a.OrganizationId == organization);
-        }
-
-        if (severity is { } level)
-        {
-            alerts = alerts.Where(a => a.Severity == level);
-        }
-
-        if (deviceId is { } device)
-        {
-            alerts = alerts.Where(a => a.DeviceId == device);
-        }
-
-        if (search?.Trim() is { Length: > 0 } term)
-        {
-            alerts = alerts.Where(a => a.Title.Contains(term) || (a.DeviceName != null && a.DeviceName.Contains(term)));
-        }
-
+        var alerts = filtered.Value;
         var counts = await CountAsync(alerts, ct);
         var take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
         var page = await (resolved ? AlertOrder.Resolved(alerts, after) : AlertOrder.Open(alerts, after)).Take(take + 1).ToListAsync(ct);
         var rows = page.Take(take).ToList();
         var next = page.Count > take ? AlertOrder.Cursor(rows[^1], resolved).Encode() : null;
         return new AlertPage(await ItemsAsync(rows, ct), next, counts.Total, counts.Critical, counts.Warning, await ReadsAsync(ct));
+    }
+
+    /// <summary>
+    /// "All that match" (M45): the alerts of the filter a bulk action may take, at most <see cref="SelectionLimit"/> of them in the
+    /// list's order, with how many matched in all.
+    /// </summary>
+    public async Task<Result<AlertSelection>> SelectAsync(AlertFilter filter, CancellationToken ct)
+    {
+        var filtered = Filter(filter, time.GetUtcNow());
+        if (!filtered.IsSuccess)
+        {
+            return filtered.Error!;
+        }
+
+        var alerts = filtered.Value;
+        var total = await alerts.CountAsync(ct);
+        var ordered = IsResolvedList(filter) ? AlertOrder.Resolved(alerts, null) : AlertOrder.Open(alerts, null);
+        var rows = await Selected(ordered.Take(SelectionLimit)).ToListAsync(ct);
+        return new AlertSelection(await SelectionItemsAsync(rows, ct), total, SelectionLimit);
+    }
+
+    /// <summary>
+    /// The chosen alerts as they are now, in any state and in the order asked (M45): a bulk dialog reads them when it opens, so a
+    /// change goes with the ETags of that read. Ids without an alert are left out.
+    /// </summary>
+    public async Task<AlertSelection> LookupAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var wanted = ids.Distinct().ToList();
+        var found = (await Selected(db.Alerts.AsNoTracking().Where(a => wanted.Contains(a.Id))).ToListAsync(ct)).ToDictionary(r => r.Id);
+        var rows = wanted.Where(found.ContainsKey).Select(id => found[id]).ToList();
+        return new AlertSelection(await SelectionItemsAsync(rows, ct), rows.Count, SelectionLimit);
+    }
+
+    private static readonly Error InvalidFilter =
+        Error.Validation("SRV_ALERT_FILTER_INVALID", $"Unknown alert state, severity or source, or an age outside 1–{MaxAgeDays} days.");
+
+    private static bool IsResolvedList(AlertFilter filter) => !filter.Hidden && filter.State == AlertState.Resolved;
+
+    /// <summary>A source as the mirror stores it (<c>atera</c>): letters, digits and hyphens; any other name matches nothing anyway.</summary>
+    private static bool IsSystemName(string value) => value.Length is > 0 and <= 64 && value.All(c => char.IsAsciiLetterOrDigit(c) || c == '-');
+
+    /// <summary>The alerts that match a filter, with their holds; a failure when the filter names no state, severity, source or age.</summary>
+    private Result<IQueryable<Alert>> Filter(AlertFilter filter, DateTimeOffset now)
+    {
+        if ((filter.State is { } s && !Enum.IsDefined(s)) || (filter.Severity is { } v && !Enum.IsDefined(v)) || (filter.Hidden && filter.State == AlertState.Resolved) ||
+            (filter.System is { } named && !IsSystemName(named)) || filter.OlderThanDays is < 1 or > MaxAgeDays)
+        {
+            return InvalidFilter;
+        }
+
+        var wanted = filter.State ?? AlertState.Open;
+        var stored = db.Alerts.AsNoTracking().Include(a => a.Hold);
+        var alerts = filter.Hidden ? stored.Where(AlertVisibility.HiddenNow(now))
+            : wanted == AlertState.Open ? stored.Where(AlertVisibility.OpenNow(now))
+            : stored.Where(a => a.State == wanted);
+        if (filter.OrganizationId is { } organization)
+        {
+            alerts = alerts.Where(a => a.OrganizationId == organization);
+        }
+
+        if (filter.Severity is { } level)
+        {
+            alerts = alerts.Where(a => a.Severity == level);
+        }
+
+        if (filter.DeviceId is { } device)
+        {
+            alerts = alerts.Where(a => a.DeviceId == device);
+        }
+
+        if (filter.Search?.Trim() is { Length: > 0 } term)
+        {
+            alerts = alerts.Where(a => a.Title.Contains(term) || (a.DeviceName != null && a.DeviceName.Contains(term)));
+        }
+
+        if (filter.System is { } system)
+        {
+            alerts = alerts.Where(a => a.System == system);
+        }
+
+        // The age the list shows: from when the source raised the alert (a gap: when this occurrence was found), and in the list of
+        // resolved alerts from when it was resolved, as that list is ordered.
+        if (filter.OlderThanDays is { } days)
+        {
+            var before = now.AddDays(-days);
+            alerts = IsResolvedList(filter)
+                ? alerts.Where(a => (a.ResolvedAt ?? a.CreatedAtSource) < before)
+                : alerts.Where(a => a.CreatedAtSource < before);
+        }
+
+        return Result<IQueryable<Alert>>.Success(alerts);
     }
 
     /// <summary>
@@ -219,6 +335,30 @@ internal sealed class AlertQueries(
             Rule: a.Rule, Facts: CoverageGaps.ReadFacts(a.Facts),
             MachineId: a.DeviceId is { } device ? machines.GetValueOrDefault(device) : null,
             SourceClosedAt: a.SourceClosedAt)).ToList();
+    }
+
+    /// <summary>The columns of a selected alert, with the row versions its ETag comes from (shadow columns, read in the projection).</summary>
+    private sealed record SelectedRow(
+        Guid Id, string System, string ExternalId, string Title, string? DeviceName, Guid OrganizationId, AlertSeverity Severity, AlertState State,
+        DateTimeOffset CreatedAt, DateTimeOffset? Until, string? Rule, string? Facts, DateTimeOffset? SourceClosedAt, byte[]? HoldVersion, byte[] AlertVersion);
+
+    private static IQueryable<SelectedRow> Selected(IQueryable<Alert> alerts) => alerts.Select(a => new SelectedRow(
+        a.Id, a.System, a.ExternalId, a.Title, a.DeviceName, a.OrganizationId, a.Severity, a.State, a.CreatedAtSource, a.Hold != null ? a.Hold.Until : null,
+        a.Rule, a.Facts, a.SourceClosedAt, EF.Property<byte[]?>(a.Hold!, ModuleDbContext.RowVersionProperty),
+        EF.Property<byte[]>(a, ModuleDbContext.RowVersionProperty)));
+
+    private async Task<IReadOnlyList<AlertSelectionItem>> SelectionItemsAsync(List<SelectedRow> rows, CancellationToken ct)
+    {
+        var names = rows.Count == 0
+            ? new Dictionary<Guid, string>()
+            : await customers.GetOrganizationNamesAsync(rows.Select(r => r.OrganizationId).Distinct().ToList(), ct);
+        var now = time.GetUtcNow();
+        // A status change is checked against the hold's version, as the single change checks it (M40); an alert an earlier release
+        // stored without a hold against its own.
+        return rows.Select(r => new AlertSelectionItem(
+            r.Id, r.System, r.ExternalId, r.Title, r.DeviceName, r.OrganizationId, names.GetValueOrDefault(r.OrganizationId), r.Severity, r.State,
+            r.CreatedAt, r.State != AlertState.Resolved && r.Until > now ? r.Until : null, r.Rule, CoverageGaps.ReadFacts(r.Facts), r.SourceClosedAt,
+            $"\"{Convert.ToBase64String(r.HoldVersion ?? r.AlertVersion)}\"")).ToList();
     }
 }
 

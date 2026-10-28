@@ -41,6 +41,7 @@ public static class IntegrationsCoreModule
         // M39.1: actions at vendors — previewed and asked for in crm-web, sent by the loop of crm-worker.
         services.AddScoped<Actions.VendorActionService>();
         services.AddScoped<Actions.VendorActionReader>();
+        services.AddScoped<Actions.VendorActionBatchService>();
         services.AddScoped<Actions.CustomerServiceReader>();
         services.AddSingleton<Actions.VendorActionRunner>();
         // M44: crm-web files what a vendor's webhook asks for; the job it names reads the records the webhook named.

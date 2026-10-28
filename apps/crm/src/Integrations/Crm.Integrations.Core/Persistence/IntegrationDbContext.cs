@@ -326,6 +326,8 @@ public sealed class IntegrationDbContext(DbContextOptions<IntegrationDbContext> 
             b.HasIndex(x => new { x.RequestedAt, x.Id });
             b.HasIndex(x => new { x.Status, x.RequestedAt });
             b.HasIndex(x => x.OrganizationId);
+            // M45: the actions of one batch, read together while the batch is followed.
+            b.HasIndex(x => x.BatchId).HasFilter("[BatchId] IS NOT NULL");
         });
 
         modelBuilder.Entity<SyncCursor>(b =>

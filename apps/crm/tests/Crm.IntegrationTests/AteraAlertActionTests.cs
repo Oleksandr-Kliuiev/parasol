@@ -129,6 +129,69 @@ public sealed class AteraAlertActionTests(CrmWebFactory factory)
         (await StateAsync(host, alert)).ShouldBe(AlertState.Open);
     }
 
+    [Fact]
+    public async Task Many_alerts_are_closed_in_atera_with_one_confirmation_and_each_says_what_happened()
+    {
+        await using var host = AteraTicketHost.Start(factory, kinds: AteraAlertKinds.All);
+        var (open, archived, moved, resolved) = (await StoredAlertAsync(host), await StoredAlertAsync(host), await StoredAlertAsync(host), await StoredAlertAsync(host));
+        host.Atera.Given(Request.Create().WithPath(Path(open)).UsingGet()).InScenario(open.Id).WillSetStateTo("open")
+            .RespondWith(JsonReply(Live(open, archived: false)));
+        host.Atera.Given(Request.Create().WithPath(Path(open)).UsingGet()).InScenario(open.Id).WhenStateIs("open")
+            .RespondWith(JsonReply(Live(open, archived: false)));
+        host.Atera.Given(Request.Create().WithPath(Path(open)).UsingPut()).InScenario(open.Id).WhenStateIs("open").WillSetStateTo("resolved")
+            .RespondWith(Response.Create().WithStatusCode(204));
+        host.Atera.Given(Request.Create().WithPath(Path(open)).UsingGet()).InScenario(open.Id).WhenStateIs("resolved")
+            .RespondWith(JsonReply(Live(open, archived: true)));
+        host.On("GET", Path(archived)).RespondWith(JsonReply(Live(archived, archived: true)));
+        host.On("GET", Path(moved)).RespondWith(JsonReply(Live(moved, archived: false) with { CustomerID = moved.CustomerId + 1 }));
+        await using (var scope = host.Services.CreateAsyncScope())
+        {
+            (await scope.ServiceProvider.GetRequiredService<IServiceApi>().ResolveAlertAsync(AteraTypes.System, resolved.Id, Ct)).ShouldBeTrue();
+        }
+
+        var unknown = TestData.AteraId().ToString(CultureInfo.InvariantCulture);
+        var previewed = await host.Client().PostAsJsonAsync("/api/v1/actions/batch/preview", new
+        {
+            system = "atera", kind = AteraAlertKinds.Resolve, targetType = AteraAlertKinds.TargetType,
+            targetIds = new[] { open.Id, archived.Id, moved.Id, resolved.Id, unknown }, parameters = new { },
+        }, Ct);
+        previewed.StatusCode.ShouldBe(HttpStatusCode.OK, await previewed.Content.ReadAsStringAsync(Ct));
+        var preview = await previewed.ReadJsonAsync();
+        preview.GetProperty("ready").GetInt32().ShouldBe(3);
+        var targets = preview.GetProperty("targets").EnumerateArray().ToList();
+        targets.Select(t => t.GetProperty("block").ValueKind == JsonValueKind.Null ? null : t.GetProperty("block").GetProperty("code").GetString())
+            .ShouldBe([null, null, null, "VND_ALERT_RESOLVED", "VND_TARGET_NOT_FOUND"]);
+        targets[0].GetProperty("target").GetProperty("name").GetString().ShouldBe(open.Title);
+        targets[0].GetProperty("target").GetProperty("organizationName").GetString().ShouldNotBeNullOrWhiteSpace("the customer is named in one read for the batch");
+
+        var command = await host.Client().PostAsJsonAsync("/api/v1/actions/batch", new
+        {
+            previewToken = preview.GetProperty("previewToken").GetString(), system = "atera", kind = AteraAlertKinds.Resolve,
+            targetType = AteraAlertKinds.TargetType, targetIds = new[] { open.Id, archived.Id, moved.Id }, parameters = new { }, batchKey = Guid.NewGuid(),
+        }, Ct);
+        command.StatusCode.ShouldBe(HttpStatusCode.Accepted, await command.Content.ReadAsStringAsync(Ct));
+        var result = await command.ReadJsonAsync();
+        var actions = result.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("actionId").GetGuid()).ToList();
+        var outcomes = new List<(VendorActionStatus, string?)>();
+        foreach (var id in actions)
+        {
+            var action = await host.RunAsync(id);
+            outcomes.Add((action.Status, action.OutcomeCode));
+        }
+
+        outcomes.ShouldBe([(VendorActionStatus.Succeeded, "VND_SENT"), (VendorActionStatus.Skipped, "VND_ALREADY_DONE"),
+            (VendorActionStatus.Rejected, "VND_ALERT_MOVED")]);
+        host.Count("PUT", Path(open)).ShouldBe(1);
+        host.Count("PUT", Path(archived)).ShouldBe(0);
+        host.Count("PUT", Path(moved)).ShouldBe(0);
+        (await StateAsync(host, open), await StateAsync(host, archived), await StateAsync(host, moved))
+            .ShouldBe((AlertState.Resolved, AlertState.Resolved, AlertState.Open), "only what Atera confirms is resolved here");
+
+        var batch = await (await host.Client().GetAsync($"/api/v1/actions/batches/{result.GetProperty("batchId").GetGuid()}", Ct)).ReadJsonAsync();
+        (batch.GetProperty("total").GetInt32(), batch.GetProperty("succeeded").GetInt32(), batch.GetProperty("skipped").GetInt32(),
+            batch.GetProperty("failed").GetInt32(), batch.GetProperty("waiting").GetInt32()).ShouldBe((3, 1, 1, 1, 0));
+    }
+
     private sealed record TestAlert(string Id, long CustomerId, Guid OrganizationId, string Title);
 
     private sealed record LiveAlert(long AlertID, long CustomerID, string Title, string Severity, string Created, bool Archived);

@@ -197,6 +197,16 @@ internal sealed class ServiceApi(ServiceDbContext db, TimeProvider time) : IServ
             : await db.Alerts.AsNoTracking().Where(a => ids.Contains(a.Id)).Select(AlertQueries.Ref).ToDictionaryAsync(a => a.Id, cancellationToken);
     }
 
+    public async Task<IReadOnlyDictionary<string, AlertRef>> GetAlertsAsync(
+        string system, IReadOnlyCollection<string> externalIds, CancellationToken cancellationToken)
+    {
+        var ids = externalIds.Distinct(StringComparer.Ordinal).ToList();
+        return ids.Count == 0
+            ? new Dictionary<string, AlertRef>(StringComparer.Ordinal)
+            : await db.Alerts.AsNoTracking().Where(a => a.System == system && ids.Contains(a.ExternalId)).Select(AlertQueries.Ref)
+                .ToDictionaryAsync(a => a.ExternalId, StringComparer.Ordinal, cancellationToken);
+    }
+
     public async Task<int> TakeDeviceSnapshotAsync(DateOnly date, CancellationToken cancellationToken)
     {
         var counts = await db.Devices.AsNoTracking()

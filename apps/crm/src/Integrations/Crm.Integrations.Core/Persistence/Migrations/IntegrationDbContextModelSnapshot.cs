@@ -221,6 +221,9 @@ namespace Crm.Integrations.Core.Persistence.Migrations
                     b.Property<int>("Attempts")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("BatchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("CloseReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -329,6 +332,9 @@ namespace Crm.Integrations.Core.Persistence.Migrations
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("BatchId")
+                        .HasFilter("[BatchId] IS NOT NULL");
 
                     b.HasIndex("OrganizationId");
 
