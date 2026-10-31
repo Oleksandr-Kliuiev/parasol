@@ -151,10 +151,13 @@ public sealed record HuntressNotice(
 /// <summary>What a notice is about: an agent (its host name), an identity (its account), a mailbox; as Huntress names it.</summary>
 public sealed record HuntressEntity(string Type, string? Id, string? Name);
 
-/// <summary>A summary report (<c>GET /v1/reports</c>): the period, a few of its figures and Huntress's link to the PDF.</summary>
+/// <summary>
+/// A summary report (<c>GET /v1/reports</c>): the period, a few of its figures and Huntress's link to the PDF.
+/// <see cref="OrganizationId"/> is null for the account's own summary, which Huntress lists among the organizations' reports.
+/// </summary>
 public sealed record HuntressReport(
     long Id,
-    long OrganizationId,
+    long? OrganizationId,
     string Type,
     DateOnly? PeriodStart,
     DateOnly? PeriodEnd,

@@ -198,16 +198,16 @@ internal sealed partial class HuntressClient
 
     internal static HuntressReport? ReadReport(JsonElement e)
     {
-        if (Long(e, "id") is not { } id || Long(e, "organization_id") is not { } organizationId)
+        if (Long(e, "id") is not { } id)
         {
             return null;
         }
 
-        // The period is written "start...end".
+        // The period is written "start...end". A report without organization_id is the account's own summary.
         var period = Text(e, "period")?.Split("...", StringSplitOptions.TrimEntries);
         return new HuntressReport(
             id,
-            organizationId,
+            Long(e, "organization_id"),
             (Text(e, "type") ?? "monthly_summary").ToLowerInvariant(),
             period is [var start, _] ? Day(start) : null,
             period is [_, var end] ? Day(end) : null,

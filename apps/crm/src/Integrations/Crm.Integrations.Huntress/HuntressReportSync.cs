@@ -7,7 +7,8 @@ namespace Crm.Integrations.Huntress;
 
 /// <summary>
 /// Huntress's monthly summary reports of the linked organizations (M41), read only: the period, a few figures and Huntress's link to
-/// the PDF. Filing the PDF among the customer's documents comes with M43.
+/// the PDF. Filing the PDF among the customer's documents comes with M43. The account's own summary, listed with no organization,
+/// belongs to no customer and is counted, not stored.
 /// </summary>
 public sealed class HuntressReportSyncJob(
     IHuntressClient client,
@@ -35,24 +36,32 @@ public sealed class HuntressReportSyncJob(
             var from = new DateOnly(today.Year, today.Month, 1).AddMonths(-Math.Clamp(options.Value.ReportMonths, 1, 120));
             var reports = new List<ExternalReport>();
             var unlinked = 0;
+            var account = 0;
             await foreach (var report in client.GetReportsAsync(from, ct))
             {
                 progress.Read++;
-                if (!organizations.TryGetValue(report.OrganizationId, out var organizationId))
+                if (report.OrganizationId is not { } huntressOrganization)
+                {
+                    account++;
+                    continue;
+                }
+
+                if (!organizations.TryGetValue(huntressOrganization, out var organizationId))
                 {
                     unlinked++;
                     continue;
                 }
 
                 reports.Add(new ExternalReport(
-                    HuntressTypes.System, report.Id, organizationId, report.OrganizationId, report.Type, report.PeriodStart, report.PeriodEnd, report.Url,
+                    HuntressTypes.System, report.Id, organizationId, huntressOrganization, report.Type, report.PeriodStart, report.PeriodEnd, report.Url,
                     report.AgentsCount, report.IncidentsReported, report.IncidentsResolved, report.SignalsDetected, report.SignalsInvestigated,
                     report.EventsAnalyzed, report.CreatedAt));
             }
 
             var stored = await security.ApplyReportsAsync(reports, ct);
             progress.Changed = stored.Changed;
-            progress.Message = $"reports {reports.Count} since {from:yyyy-MM-dd}: new {stored.Added}, changed {stored.Updated}; skipped (organization not linked) {unlinked}";
+            progress.Message = $"reports {reports.Count} since {from:yyyy-MM-dd}: new {stored.Added}, changed {stored.Updated}; "
+                + $"skipped (organization not linked) {unlinked}, (the account's own) {account}";
         }, cancellationToken);
     }
 }
