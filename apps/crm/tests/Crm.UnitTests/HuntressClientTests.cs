@@ -186,7 +186,10 @@ public sealed class HuntressClientTests
 
         var odd = HuntressClient.ReadReport(Json("""{ "id": 1, "organization_id": 2, "period": "last month" }"""))!;
         (odd.PeriodStart, odd.PeriodEnd, odd.Type).ShouldBe(((DateOnly?)null, (DateOnly?)null, "monthly_summary"));
-        HuntressClient.ReadReport(Json("""{ "id": 1, "period": "2026-09-01...2026-09-30" }""")).ShouldBeNull("no organization");
+        // Huntress lists the account's own summary among the organizations' reports, without organization_id (live account, 30.10.2026).
+        var account = HuntressClient.ReadReport(Json("""{ "id": 1, "organization_id": null, "period": "2026-09-01...2026-10-01" }"""))!;
+        (account.Id, account.OrganizationId, account.PeriodStart).ShouldBe((1L, (long?)null, (DateOnly?)new DateOnly(2026, 9, 1)));
+        HuntressClient.ReadReport(Json("""{ "organization_id": 2, "period": "2026-09-01...2026-09-30" }""")).ShouldBeNull("no id");
     }
 
     [Fact]

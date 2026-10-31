@@ -321,11 +321,14 @@ public sealed class HuntressSyncTests(CrmWebFactory factory)
                 new { id = report, organization_id = customer.HuntressOrganizationId, type = "monthly_summary", period = "2026-09-01...2026-09-30",
                     agents_count = 12, incidents_reported = 3, incidents_resolved = 2, signals_detected = 41, url = "https://huntress.example.invalid/report.pdf" },
                 new { id = report + 1, organization_id = customer.HuntressOrganizationId + 99, type = "monthly_summary", period = "2026-09-01...2026-09-30" },
+                new { id = report + 2, organization_id = (long?)null, type = "monthly_summary", period = "2026-09-01...2026-10-01" },
             },
             pagination = new { next_page_token = (string?)null },
         }));
 
         await host.RunJobAsync<HuntressReportSyncJob>(job => job.RunAsync(Ct));
+        (await host.LatestRunAsync(HuntressReportSyncJob.JobId)).Status
+            .ShouldBe(SyncRunStatus.Succeeded, "the account's own summary has no organization: skipped, not a report that fails the read");
 
         var overview = await host.Client().GetFromJsonAsync<JsonElement>($"/api/v1/security/organizations/{customer.OrganizationId}/overview", Ct);
         var stored = overview.GetProperty("reports").EnumerateArray().ShouldHaveSingleItem();

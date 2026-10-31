@@ -158,5 +158,18 @@ export function seedHuntress({ base, run }) {
       });
     }
   }
+  // The account's own summary for each month, listed with the others but without an organization, as the live account does.
+  for (let back = 3; back >= 1; back--) {
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+    const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back + 1, 1));
+    reports.push({
+      id: base + 60 + reports.length + 1, organization_id: null, type: 'monthly_summary',
+      period: `${start.toISOString().slice(0, 10)}...${end.toISOString().slice(0, 10)}`,
+      agents_count: agents.length, incidents_reported: 0, incidents_resolved: 0,
+      signals_detected: 40 * back * organizations.length, signals_investigated: 12 * back, events_analyzed: 150_000 * back,
+      analyst_note: 'Synthetic summary of the whole stand-in account.',
+      created_at: end.toISOString(), updated_at: end.toISOString(),
+    });
+  }
   return { account, organizations, agents, incidents, escalations, platformActions, reports };
 }
