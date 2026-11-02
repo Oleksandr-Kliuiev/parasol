@@ -12,7 +12,7 @@ import { ActionStatusBadge } from '../actions/ActionStatusBadge';
 import { actionErrorText, outcomeText } from '../actions/actionText';
 import { isWaiting, type VendorAction } from '../actions/types';
 import { systemName } from '../integrations/labels';
-import type { CreateChoice, CustomerService, LineChoice } from './connectServices';
+import { stepsOutside, type CreateChoice, type CustomerService, type LineChoice } from './connectServices';
 
 const useStyles = makeStyles({
   content: { display: 'grid', gap: '16px', gridTemplateColumns: 'minmax(0, 1fr)' },
@@ -82,7 +82,7 @@ export function ConnectResult({ creates, lines, contractId, contractNumber, choi
   // The worker links the customer when it creates it, after the command returned: the links are read again as outcomes come in.
   useEffect(() => { if (settledCount > 0) onSettled(); }, [settledCount, onSettled]);
 
-  const made = creates.filter((c) => madeIt(actionOf(c.system)));
+  const made = creates.filter((c) => madeIt(actionOf(c.system)) && stepsOutside.has(c.system));
   const waiting = creates.some((c) => c.action !== null && isWaiting(actionOf(c.system)!.status));
   return (
     <div className={styles.content}>

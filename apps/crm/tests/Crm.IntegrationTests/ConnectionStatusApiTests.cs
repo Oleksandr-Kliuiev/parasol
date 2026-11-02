@@ -80,7 +80,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         response.StatusCode.ShouldBe(HttpStatusCode.OK); response.Headers.CacheControl!.NoStore.ShouldBeTrue();
         var view = (await response.Content.ReadFromJsonAsync<ConnectionStatusView>(Ct))!;
         view.Status.ShouldBeOneOf("Ready", "Gaps");
-        view.Integrations.Select(i => i.System).ShouldBe(["atera", "huntress", "poweroffice", "cloudally", "partnercenter", "microsoft-graph", "brreg"]);
+        view.Integrations.Select(i => i.System).ShouldBe(["atera", "huntress", "poweroffice", "cloudally", "partnercenter", "microsoft-graph", "graph", "brreg"]);
         var integrations = view.Integrations.ToDictionary(i => i.System);
         var atera = integrations["atera"];
         (atera.Enabled, atera.WriteEnabled).ShouldBe((true, (bool?)false));
@@ -99,6 +99,10 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
         cloudAlly.State!.Jobs.Select(j => (j.Job, j.Freshness)).ShouldBe([("cloudally-accounts", "Disabled"), ("cloudally-backups", "Disabled"), ("cloudally-bills", "Disabled")]);
         integrations["partnercenter"].State!.Jobs.Select(j => j.Job).ShouldBe(["partnercenter-customers", "partnercenter-subscriptions", "partnercenter-licenses"]);
         integrations["microsoft-graph"].State!.Jobs.Select(j => j.Job).ShouldBe(["entra-user-sync", "entra-role-sync"]);
+        // M47: SharePoint's folders for the mapping screen; this installation reads them but does not write.
+        var sharePoint = integrations["graph"];
+        (sharePoint.Enabled, sharePoint.WriteEnabled).ShouldBe((true, (bool?)false));
+        sharePoint.State!.Jobs.Select(j => j.Job).ShouldBe(["sharepoint-folders"]);
         integrations["brreg"].WriteEnabled.ShouldBeNull();
         // Each job is late after its own schedule (or its specification limit), none after the general day: alerts read twice an
         // hour are late after an hour, not up to date for a day.
@@ -110,7 +114,7 @@ public sealed class ConnectionStatusApiTests(CrmWebFactory factory) : IAsyncLife
             ["poweroffice-customers"] = 37, ["poweroffice-contact-persons"] = 60, ["poweroffice-products"] = 2175, ["poweroffice-invoices"] = 90,
             ["cloudally-accounts"] = 105, ["cloudally-backups"] = 195, ["cloudally-bills"] = 2175,
             ["partnercenter-customers"] = 2175, ["partnercenter-subscriptions"] = 375, ["partnercenter-licenses"] = 2175,
-            ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["brreg-registry-check"] = 2175,
+            ["entra-user-sync"] = 105, ["entra-role-sync"] = 18, ["sharepoint-folders"] = 105, ["brreg-registry-check"] = 2175,
         }, ignoreOrder: true);
         view.Worker!.Components.Select(c => c.Component).ShouldBe(["outbox", "jobs", "actions", "early-reads"]);
         // M44: Atera and Huntress have webhooks, switched off in this installation; the others have none.

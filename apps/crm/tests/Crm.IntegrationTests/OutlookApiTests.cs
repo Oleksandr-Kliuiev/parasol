@@ -197,44 +197,22 @@ public class OutlookApiTests(CrmWebFactory factory)
     }
 
     [Fact]
-    public async Task A_customer_gets_a_sharepoint_folder_and_the_card_lists_it()
+    public async Task Becoming_a_customer_creates_no_folder_by_itself_and_the_card_says_there_is_none()
     {
+        // M47: a library full of folders people made must not get a second one per customer the moment SharePoint is switched on. A folder
+        // is created when a person asks (a vendor action, SharePointDocumentsTests) or linked on the mapping screen.
         var admin = factory.ClientAs(CrmRoles.Admin, userKey: "outlook-admin");
         var marker = $"D{Guid.NewGuid():N}"[..10];
-        var orgNumber = TestData.OrgNumber();
-        var folderId = $"folder-{marker}";
 
-        // Every test in the suite creates organizations, and the folder handler answers for all of them; the stub is
-        // therefore matched on this test's own folder name so it cannot adopt somebody else's customer.
-        factory.Graph.Given(Request.Create().WithPath(Graph("drives/drive-1/root/children")).UsingPost()
-                .WithBody(new WireMock.Matchers.WildcardMatcher($"*{marker}*")))
-            .RespondWith(JsonReply(new { id = folderId, name = $"{marker} Dokument AS ({orgNumber})", webUrl = "https://vardahei.sharepoint.com/kunder/1", folder = new { childCount = 0 } }, 201));
-        factory.Graph.Given(Request.Create().WithPath(Graph($"drives/drive-1/items/{folderId}")).UsingGet())
-            .RespondWith(JsonReply(new { id = folderId, name = $"{marker} Dokument AS ({orgNumber})", webUrl = "https://vardahei.sharepoint.com/kunder/1", folder = new { childCount = 1 } }));
-        factory.Graph.Given(Request.Create().WithPath(Graph($"drives/drive-1/items/{folderId}/children")).UsingGet())
-            .RespondWith(JsonReply(new
-            {
-                value = new object[]
-                {
-                    new { id = "file-1", name = "Avtale.pdf", size = 20480, webUrl = "https://vardahei.sharepoint.com/kunder/1/Avtale.pdf", lastModifiedDateTime = "2027-01-05T10:00:00Z", lastModifiedBy = new { user = new { displayName = "Ola Nordmann" } } },
-                    new { id = "sub-1", name = "Tilbud", size = 0, webUrl = "https://vardahei.sharepoint.com/kunder/1/Tilbud", folder = new { childCount = 2 }, lastModifiedDateTime = "2027-01-06T10:00:00Z", lastModifiedBy = new { user = new { displayName = "Kari" } } },
-                },
-            }));
-
-        var organizationId = await admin.CreateOrganizationAsync(new { name = $"{marker} Dokument AS", status = "Customer", orgNumber });
-        await factory.EventuallyAsync(async () =>
-            (await admin.GetFromJsonAsync<JsonElement>($"/api/v1/customers/organizations/{organizationId}/documents"))
-            .GetProperty("folder").ValueKind != JsonValueKind.Null);
+        var organizationId = await admin.CreateOrganizationAsync(new { name = $"{marker} Dokument AS", status = "Customer", orgNumber = TestData.OrgNumber() });
+        await factory.ProcessEventsAndOutboundAsync();
 
         var documents = await admin.GetFromJsonAsync<JsonElement>($"/api/v1/customers/organizations/{organizationId}/documents");
-        documents.GetProperty("available").GetBoolean().ShouldBeTrue();
-        documents.GetProperty("folder").GetProperty("name").GetString().ShouldBe($"{marker} Dokument AS ({orgNumber})");
-        var items = documents.GetProperty("items").EnumerateArray().ToList();
-        items.Count.ShouldBe(2);
-        // Folders come first, then files by name.
-        items[0].GetProperty("isFolder").GetBoolean().ShouldBeTrue();
-        items[1].GetProperty("name").GetString().ShouldBe("Avtale.pdf");
-        items[1].GetProperty("size").GetInt64().ShouldBe(20480);
+        (documents.GetProperty("available").GetBoolean(), documents.GetProperty("state").GetString()).ShouldBe((true, "NoFolder"));
+        documents.GetProperty("folder").ValueKind.ShouldBe(JsonValueKind.Null);
+        factory.Graph.LogEntries.Select(e => e.RequestMessage!)
+            .Where(r => r.Method == "POST" && r.Path.Contains("/drives/", StringComparison.Ordinal) && (r.Body ?? string.Empty).Contains(marker, StringComparison.Ordinal))
+            .ShouldBeEmpty();
     }
 
     [Fact]

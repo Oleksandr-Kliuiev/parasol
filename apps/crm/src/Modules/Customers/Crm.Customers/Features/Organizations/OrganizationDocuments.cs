@@ -1,58 +1,28 @@
 using Crm.Customers.Contracts;
-using Crm.SharedKernel.Results;
-using Microsoft.Extensions.Logging;
 
 namespace Crm.Customers.Features.Organizations;
 
-/// <summary>What the Documents tab shows: the customer's SharePoint folder and what is in it (FR-DOC-01).</summary>
-public sealed record OrganizationDocumentsDto(bool Available, DocumentFolder? Folder, IReadOnlyList<DocumentItem> Items);
+/// <summary>
+/// What the Documents tab shows (FR-DOC-01, M47): whether SharePoint is set up, how reading the customer's folder ended, the link (so a
+/// person may take a stale one off), the folder and its first page, and whether it holds more than that page.
+/// </summary>
+public sealed record OrganizationDocumentsDto(
+    bool Available, DocumentFolderState State, Guid? LinkId, DocumentFolder? Folder, IReadOnlyList<DocumentItem> Items, bool More);
 
 /// <summary>
-/// The customer's documents live in SharePoint, not in the CRM: the card shows the folder and links into it. When
-/// SharePoint is not configured the tab says so instead of failing (FR-DOC-01).
+/// The customer's documents live in SharePoint, not in the CRM: the card shows the folder and links into it. When SharePoint is not
+/// configured the tab says so instead of failing; creating a folder is a vendor action of the integration (M47), not this module's.
 /// </summary>
-internal sealed class OrganizationDocumentsService(IEnumerable<IDocumentLibrary> libraries, ILogger<OrganizationDocumentsService> logger)
+internal sealed class OrganizationDocumentsService(IEnumerable<IDocumentLibrary> libraries)
 {
-    private IDocumentLibrary? Library => libraries.FirstOrDefault(l => l.IsAvailable);
-
     public async Task<OrganizationDocumentsDto> ListAsync(Guid organizationId, CancellationToken cancellationToken)
     {
-        if (Library is not { } library)
+        if (libraries.FirstOrDefault(l => l.IsAvailable) is not { } library)
         {
-            return new OrganizationDocumentsDto(false, null, []);
+            return new OrganizationDocumentsDto(false, DocumentFolderState.NoFolder, null, null, [], false);
         }
 
-        try
-        {
-            var folder = await library.GetFolderAsync(organizationId, cancellationToken);
-            var items = folder is null ? [] : await library.ListAsync(organizationId, cancellationToken);
-            return new OrganizationDocumentsDto(true, folder, items);
-        }
-        catch (HttpRequestException exception)
-        {
-            // SharePoint being slow or unreachable must not take the customer card with it (NFR-08).
-            logger.LogWarning(exception, "Reading the documents of organization {Organization} failed.", organizationId);
-            return new OrganizationDocumentsDto(true, null, []);
-        }
-    }
-
-    public async Task<Result<OrganizationDocumentsDto>> CreateFolderAsync(Guid organizationId, CancellationToken cancellationToken)
-    {
-        if (Library is not { } library)
-        {
-            return Error.Conflict("CUS_SHAREPOINT_DISABLED", "SharePoint is not configured, so there is nowhere to create the folder.");
-        }
-
-        try
-        {
-            var folder = await library.EnsureFolderAsync(organizationId, cancellationToken);
-            var items = await library.ListAsync(organizationId, cancellationToken);
-            return new OrganizationDocumentsDto(true, folder, items);
-        }
-        catch (HttpRequestException exception)
-        {
-            logger.LogWarning(exception, "Creating the SharePoint folder of organization {Organization} failed.", organizationId);
-            return Error.Conflict("CUS_SHAREPOINT_FAILED", "SharePoint refused the request; try again or create the folder by hand.");
-        }
+        var listing = await library.ReadAsync(organizationId, cancellationToken);
+        return new OrganizationDocumentsDto(true, listing.State, listing.LinkId, listing.Folder, listing.Items, listing.More);
     }
 }

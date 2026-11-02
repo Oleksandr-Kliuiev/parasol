@@ -823,6 +823,7 @@
       "brreg-registry-check": "Kontroll av registerstatus (Brønnøysund)",
       "entra-user-sync": "Brukarsynkronisering (Entra ID)",
       "entra-role-sync": "Rollesynkronisering (Entra ID)",
+      "sharepoint-folders": "Kundemapper (SharePoint)",
       "atera-customers": "Kundar (Atera)",
       "atera-contacts": "Kontaktar (Atera)",
       "poweroffice-customers": "Kundar (PowerOffice)",
@@ -886,6 +887,7 @@
     "poweroffice": "PowerOffice Go",
     "atera": "Atera",
     "microsoft-graph": "Microsoft Entra ID",
+    "graph": "SharePoint",
     "brreg": "Brønnøysundregistera",
     "partnercenter": "Microsoft Partner Center",
     "huntress": "Huntress",
@@ -896,7 +898,8 @@
     "ContactPerson": "Kontaktpersonar",
     "Contact": "Kontaktar",
     "Product": "Produkt",
-    "Organization": "Organisasjonar"
+    "Organization": "Organisasjonar",
+    "Folder": "Mapper"
   },
   "mappings": {
     "title": "Koplingar",
@@ -951,6 +954,7 @@
     "bulkDone": "Kopla {{linked}}, oppretta {{created}}, hoppa over {{skipped}}, feila {{failed}}",
     "autoLinkDone": "Kopla {{linked}}; {{skipped}} utan eksakt treff",
     "empty": "Ingen postar. Dei blir viste etter første synkronisering.",
+    "noMatch": "Ingen postar passar til søket.",
     "pickProductTitle": "Kople til eit produkt i CRM",
     "filtersLabel": "Filtrer postane",
     "stateLabel": "Koplingsstatus",
@@ -2823,11 +2827,33 @@
   "documents": {
     "title": "Dokument i SharePoint",
     "notConfigured": "SharePoint er ikkje sett opp for CRM enno.",
-    "noFolder": "Kunden har ingen mappe enno.",
+    "noFolder": "Kunden er ikkje kopla til ei mappe enno.",
+    "noFolderHint": "Har kunden ei mappe i SharePoint frå før, koplar du ho til. Elles opprettar du ei ny.",
+    "noFolderLinkHint": "Har kunden ei mappe i SharePoint frå før, koplar du ho til. Å opprette mapper frå Parasoll er ikkje slått på.",
+    "noFolderAskHint": "Den som styrer integrasjonane i Parasoll, kan opprette ei mappe eller kople kunden til ei som finst.",
     "createFolder": "Opprett mappe",
-    "folderCreated": "Mappa er oppretta",
+    "createFolderTitle": "Opprett mappe i SharePoint",
+    "linkExisting": "Kople til ei mappe som finst",
+    "linkInstead": "Har kunden ei mappe frå før, kanskje med eit anna namn? Kople ho til i staden.",
     "openInSharePoint": "Opne i SharePoint",
     "empty": "Mappa er tom.",
+    "more": "Viser dei første {{count}} elementa. Opne mappa i SharePoint for å sjå resten.",
+    "gone": "Mappa kunden er kopla til, er sletta eller flytta i SharePoint.",
+    "goneAskHint": "Den som styrer integrasjonane i Parasoll, kan fjerne koplinga og gi kunden ei ny mappe.",
+    "unlink": "Fjern koplinga",
+    "unlinkTitle": "Fjerne koplinga til mappa?",
+    "unlinkBody": "Kunden blir kopla frå mappa i Parasoll. Ingenting blir sletta i SharePoint. Etterpå kan du opprette ei ny mappe eller kople til ei anna.",
+    "keepLink": "Behald koplinga",
+    "unlinked": "Koplinga er fjerna",
+    "noAccess": "SharePoint gir deg ikkje tilgang til mappa.",
+    "noAccessHint": "Parasoll viser berre det du sjølv kan opne i SharePoint. Be den som styrer SharePoint, om tilgang.",
+    "notConnected": "Parasoll får ikkje lese SharePoint for deg.",
+    "notConnectedHint": "Parasoll les mappene med din eigen tilgang. Hjelper det ikkje å logge inn på nytt, må administratoren gi Parasoll tilgang til filene i Microsoft 365.",
+    "signInAgain": "Logg inn på nytt",
+    "unavailable": "SharePoint svarte ikkje. Prøv igjen om litt.",
+    "rootFolder": "mappa «{{root}}»",
+    "libraryRoot": "dokumentbiblioteket",
+    "folderKind": "mappe",
     "fields": {
       "name": "Namn",
       "size": "Storleik",
@@ -5201,6 +5227,11 @@
           "other": "Gjenopprett ein annan stad",
           "in-place": "Gjenopprett på same staden"
         }
+      },
+      "graph": {
+        "folder": {
+          "create": "Opprett mappa i SharePoint"
+        }
       }
     },
     "effects": {
@@ -5272,7 +5303,8 @@
       "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Maskinene kjem først når Huntress-agenten er installert med nøkkelen {{key}} – det blir gjort i Atera, utanfor Parasoll.",
       "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly får kontoen «{{name}}» for {{email}} i datasenteret {{region}}, opna som prøvekonto.",
       "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly krev eit passord: Parasoll lagar eit tilfeldig og lagrar det ingen stader. De når kontoen gjennom partnarportalen til CloudAlly; kunden kan lage sitt eige med «Gløymt passord».",
-      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Tryggingskopiane startar først når kunden har gitt CloudAlly tilgang til Microsoft 365 og oppgåvene er sette opp – det blir gjort i CloudAlly, utanfor Parasoll."
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Tryggingskopiane startar først når kunden har gitt CloudAlly tilgang til Microsoft 365 og oppgåvene er sette opp – det blir gjort i CloudAlly, utanfor Parasoll.",
+      "VND_EFFECT_SHAREPOINT_FOLDER_CREATE": "SharePoint får mappa «{{name}}» i {{root}}."
     }
   },
   "tickets": {
@@ -5750,7 +5782,7 @@
     "intro": "Vel kva Parasoll skal opprette for {{customer}}. Kvar teneste blir kopla til kunden med ein gong; det API-a til leverandørane ikkje kan gjere, står til slutt.",
     "loading": "Hentar tenestene til kunden …",
     "loadError": "Tenestene kunne ikkje lesast.",
-    "noneEnabled": "Verken Atera, Huntress eller CloudAlly er kopla til Parasoll i denne installasjonen.",
+    "noneEnabled": "Verken Atera, Huntress, CloudAlly eller SharePoint er kopla til Parasoll i denne installasjonen.",
     "linked": "Kopla til «{{name}}»",
     "linkedId": "Kopla til #{{id}}; namnet kjem ved neste lesing av {{system}}.",
     "linkedBadge": "Kopla",
@@ -5764,7 +5796,13 @@
       "VND_CUSTOMER_NOT_ALLOWED": "{{system}} tek førebels berre imot endringar for testkundane.",
       "VND_FORBIDDEN": "Tilgangen din omfattar ikkje å opprette kundar i {{system}}.",
       "VND_EXISTS_AT_VENDOR": "{{system}} har allereie «{{name}}», som ikkje er kopla til nokon kunde. Kople han under Koplingar i staden.",
-      "VND_EARLIER_ATTEMPT_OPEN": "Ein tidlegare førespurnad om å opprette kunden i {{system}} har ikkje fått noko utfall enno. Avklar han i handlingsloggen først."
+      "VND_EARLIER_ATTEMPT_OPEN": "Ein tidlegare førespurnad om å opprette kunden i {{system}} har ikkje fått noko utfall enno. Avklar han i handlingsloggen først.",
+      "graph": {
+        "VND_KIND_DISABLED": "Å opprette mapper i SharePoint er ikkje slått på i denne installasjonen.",
+        "VND_FORBIDDEN": "Tilgangen din omfattar ikkje å opprette mapper i SharePoint.",
+        "VND_EXISTS_AT_VENDOR": "SharePoint har allereie mappa «{{name}}», som ikkje er kopla til nokon kunde. Kople ho under Koplingar i staden.",
+        "VND_EARLIER_ATTEMPT_OPEN": "Ein tidlegare førespurnad om å opprette mappa til kunden i SharePoint har ikkje fått noko utfall enno. Avklar han i handlingsloggen først."
+      }
     },
     "atera": {
       "note": "Namn, organisasjonsnummer og kontaktopplysningar blir henta frå kundekortet."
@@ -5779,6 +5817,9 @@
       "emailHint": "CloudAlly sender rapportane for kontoen hit. Éin konto per adresse: bruk ei eiga adresse for kvar kunde, som firmaet ditt styrer.",
       "emailInvalid": "Skriv ei e-postadresse.",
       "region": "Datasenter"
+    },
+    "graph": {
+      "note": "Mappa «{{name}}» blir oppretta i {{root}} og kopla til kunden."
     },
     "regions": {
       "EU": "EU",
@@ -5818,7 +5859,12 @@
         "VND_EXISTS_AT_VENDOR": "{{system}} har allereie ein post for denne kunden som ingen kunde er kopla til. Er det denne, koplar du han under Koplingar.",
         "VND_AMBIGUOUS_AT_VENDOR": "{{system}} har fleire postar som kan vere denne kunden. Kople den rette under Koplingar.",
         "VND_EARLIER_ATTEMPT_OPEN": "Ein tidlegare førespurnad om å opprette kunden i {{system}} har ikkje fått noko utfall enno. Avklar han i handlingsloggen først.",
-        "VND_ALREADY_CONNECTED": "Kunden er allereie kopla til {{system}}."
+        "VND_ALREADY_CONNECTED": "Kunden er allereie kopla til {{system}}.",
+        "graph": {
+          "VND_EXISTS_AT_VENDOR": "SharePoint har allereie ei mappe med namnet til denne kunden som ingen kunde er kopla til. Er det denne, koplar du ho under Koplingar.",
+          "VND_AMBIGUOUS_AT_VENDOR": "SharePoint har fleire mapper som kan vere mappa til denne kunden. Kople den rette under Koplingar.",
+          "VND_EARLIER_ATTEMPT_OPEN": "Ein tidlegare førespurnad om å opprette mappa til kunden i SharePoint har ikkje fått noko utfall enno. Avklar han i handlingsloggen først."
+        }
       }
     },
     "result": {

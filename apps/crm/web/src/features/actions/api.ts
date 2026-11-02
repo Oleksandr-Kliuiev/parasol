@@ -68,15 +68,29 @@ export function useBatchAvailable(system: string, kind: string, enabled = true):
   return enabled && Array.isArray(data) && data.some((item) => item.kind === kind && item.batch === true);
 }
 
+/**
+ * Whether the person may ask for this kind now, or undefined while that is still being read: words that say whether a way is switched
+ * on wait for the answer instead of changing under the reader (M47). An answer that cannot be read is a no.
+ */
+export function useActionOffer(system: string, kind: string, enabled = true): boolean | undefined {
+  const { data, isError } = useActionKindsQuery(system, enabled);
+  if (!enabled || isError) return false;
+  return Array.isArray(data) ? data.some((item) => item.kind === kind) : undefined;
+}
+
 /** The kinds the person may ask for now, one read a minute shared by every form that offers one. */
 function useActionKinds(system: string, enabled: boolean) {
+  return useActionKindsQuery(system, enabled).data;
+}
+
+function useActionKindsQuery(system: string, enabled: boolean) {
   return useQuery({
     queryKey: actionKeys.kinds(system),
     enabled,
     queryFn: async ({ signal }) => (await api.get<ActionKind[]>(`${BASE}/kinds${query({ system })}`, signal)).data,
     staleTime: 60_000,
     retry: false,
-  }).data;
+  });
 }
 
 /** One action, read again every two seconds while the worker still has it (UX: a page that waits for the worker polls). */

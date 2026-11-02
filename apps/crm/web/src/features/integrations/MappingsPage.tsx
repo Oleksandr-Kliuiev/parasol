@@ -41,6 +41,8 @@ import { errorMessage } from '../../shared/utils/errors';
 import { formatDateTime } from '../../shared/utils/format';
 import { formatOrgNumber } from '../../shared/utils/orgNumber';
 import { useDebouncedValue } from '../../shared/utils/useDebouncedValue';
+import { NARROW_SCREEN, useMediaQuery } from '../../shared/utils/useMediaQuery';
+import { useRecordStyles } from '../organizations/recordStyles';
 import { ForbiddenPage } from '../errors/ForbiddenPage';
 import { useIntegrationActions, useIntegrationStatus, useRecords, type RecordFilters } from './api';
 import { entityRoute, entityTypeOf, systemName, typeName } from './labels';
@@ -77,6 +79,10 @@ const useStyles = makeStyles({
   suggestionAction: { flexShrink: 0 },
   suggestionName: { fontWeight: tokens.fontWeightSemibold, fontSize: '13px', lineHeight: '18px', overflowWrap: 'anywhere' },
   actions: { display: 'flex', flexWrap: 'wrap', gap: '4px' },
+  // A phone card holds the record over what it matches and its buttons: a column, not the record card's row.
+  card: { display: 'grid', gap: '10px', alignItems: 'stretch' },
+  cardPart: { display: 'grid', gap: '4px', minWidth: 0 },
+  cardLabel: { color: h.muted, fontSize: '13px', lineHeight: '18px' },
   info: { marginBottom: '16px' },
   more: { display: 'flex', justifyContent: 'center', paddingTop: '12px', paddingBottom: '12px' },
 });
@@ -98,12 +104,17 @@ export function MappingsPage() {
   const [bulk, setBulk] = useState<{ preview: BulkResult | null } | null>(null);
   const shownBulk = useKeptWhileClosing(bulk);
   const restoreFocusTarget = useRestoreFocusTarget();
+  const narrow = useMediaQuery(NARROW_SCREEN);
+  const recordCards = useRecordStyles();
 
   // Connected systems first, so the default tab is one that has data.
   const systems = (status.data ?? []).filter((s) => s.recordTypes.length > 0).sort((a, b) => Number(b.enabled) - Number(a.enabled));
   const system = params.get('system') ?? systems[0]?.system ?? 'poweroffice';
-  const types = systems.find((s) => s.system === system)?.recordTypes ?? [];
+  const current = systems.find((s) => s.system === system);
+  const types = current?.recordTypes ?? [];
   const type = params.get('type') ?? types[0] ?? 'Customer';
+  // A record type that is only linked (a SharePoint folder, M47) offers no import: the server refuses one as well.
+  const importable = (current?.importableTypes ?? types).includes(type);
   const state = (params.get('state') as State | null) ?? 'Unlinked';
   const filters: RecordFilters = { system, type, state, search };
   const records = useRecords(filters);
@@ -134,6 +145,112 @@ export function MappingsPage() {
   // They are not its answer: the counts on the states keep their room unseen, and no empty answer is claimed for them.
   const stale = records.isPlaceholderData;
   const loading = records.isPending || (stale && rows.length === 0);
+  // A SharePoint item id says nothing to a person (M47): a folder is told by its name and when it changed.
+  const opaqueKeys = system === 'graph';
+
+  // One record's parts, the same in a table row and a phone card.
+  const externalCell = (r: ExternalRecordItem) => (
+    <>
+      <Text className={styles.name}>{r.displayName}</Text>
+      <span className={styles.meta}>
+        <span className={styles.muted}>
+          {opaqueKeys ? '' : `#${r.externalId} · `}
+          {formatDateTime(r.externalChangedAt ?? r.lastSeenAt)}
+        </span>{' '}
+        {r.isGone && (
+          <Badge size="small" appearance="outline">
+            {t('mappings.gone')}
+          </Badge>
+        )}
+      </span>
+    </>
+  );
+  const keysCell = (r: ExternalRecordItem) => (
+    <>
+      {r.orgNumber && <Text block className="tabular">{formatOrgNumber(r.orgNumber)}</Text>}
+      {r.email && <Text block className={styles.muted}>{r.email}</Text>}
+      {r.domain && <Text block className={styles.muted}>{r.domain}</Text>}
+    </>
+  );
+  const crmCell = (r: ExternalRecordItem) => {
+    const route = r.link ? entityRoute(r.externalType, r.link.entityId) : null;
+    return r.link ? (
+      <span>
+        {route ? <AppLink to={route}>{r.link.entityName ?? r.link.entityId}</AppLink> : r.link.entityName}{' '}
+        <Text className={styles.muted}>({t(`mappings.methods.${r.link.method}`)})</Text>
+      </span>
+    ) : r.suggestions.length > 0 ? (
+      <span className={styles.suggestions}>
+        {r.suggestions.map((s) => {
+          const reasons = s.reasons.map((x) => t(`mappings.reasons.${x}`, { defaultValue: x })).join(', ');
+          return (
+            // A suggested CRM record: its name and why it matches, the link button at the end of the row.
+            <span key={s.entityId} className={styles.suggestion}>
+              <span className={styles.suggestionText}>
+                <span className={styles.suggestionName}>{s.name}</span>
+                <span className={styles.muted}>{reasons}</span>
+              </span>
+              <Button
+                size="small"
+                className={styles.suggestionAction}
+                aria-label={`${t('mappings.linkTo', { name: s.name })} · ${reasons}`}
+                onClick={() =>
+                  void run(
+                    () => actions.link.mutateAsync({ system, externalType: type, externalId: r.externalId, entityId: s.entityId }),
+                    () => t('mappings.linked'),
+                  )
+                }
+              >
+                {t('mappings.link')}
+              </Button>
+            </span>
+          );
+        })}
+      </span>
+    ) : (
+      <Text className={styles.muted}>{entityType ? t('mappings.noSuggestion') : ''}</Text>
+    );
+  };
+  const actionsCell = (r: ExternalRecordItem) => (
+    <span className={styles.actions}>
+      {r.link ? (
+        <Button size="small" appearance="subtle" onClick={() => void run(() => actions.unlink.mutateAsync(r.link!.linkId), () => t('mappings.unlinked'))}>
+          {t('mappings.unlink')}
+        </Button>
+      ) : (
+        <>
+          {(entityType === 'Organization' || entityType === 'Product') && (
+            <Button {...restoreFocusTarget} size="small" onClick={() => setPicking(r)}>
+              {t('mappings.pick')}
+            </Button>
+          )}
+          {importable && (
+            <Button
+              size="small"
+              onClick={() => void run(() => actions.importOne.mutateAsync({ system, type, externalId: r.externalId }), () => t('mappings.imported'))}
+              disabled={actions.importOne.isPending}
+            >
+              {t('mappings.import')}
+            </Button>
+          )}
+        </>
+      )}
+    </span>
+  );
+  // The end of the list: reading, nothing found (for a search: nothing matches it), or the next page.
+  const listEnd = (
+    <>
+      {loading && <Spinner className={styles.more} />}
+      {!loading && rows.length === 0 && <EmptyState message={t(search ? 'mappings.noMatch' : 'mappings.empty')} icon={<PlugDisconnected24Regular />} />}
+      {records.hasNextPage && (
+        <div className={styles.more}>
+          <Button onClick={() => void records.fetchNextPage()} disabled={records.isFetchingNextPage}>
+            {t('common.loadMore')}
+          </Button>
+        </div>
+      )}
+    </>
+  );
 
   const openBulk = async () => {
     setBulk({ preview: null });
@@ -179,9 +296,11 @@ export function MappingsPage() {
               >
                 {t('mappings.autoLink')}
               </Button>
-              <Button {...restoreFocusTarget} appearance="primary" onClick={() => void openBulk()}>
-                {t('mappings.importAll')}
-              </Button>
+              {importable && (
+                <Button {...restoreFocusTarget} appearance="primary" onClick={() => void openBulk()}>
+                  {t('mappings.importAll')}
+                </Button>
+              )}
             </>
           )
         }
@@ -210,6 +329,29 @@ export function MappingsPage() {
 
       {records.error ? (
         <ErrorState error={records.error} onRetry={() => void records.refetch()} />
+      ) : narrow ? (
+        // On a phone the table hid the way to link behind a sideways scroll: each record is a card, the record on top, what it
+        // matches in the CRM under it and its buttons last.
+        <>
+          {rows.length > 0 && (
+            <ul className={recordCards.cards} aria-label={t('mappings.title')} aria-busy={stale || undefined}>
+              {rows.map((r) => (
+                <li key={r.id} className={mergeClasses(recordCards.card, styles.card)}>
+                  <div>{externalCell(r)}</div>
+                  {(r.orgNumber || r.email || r.domain) && <div>{keysCell(r)}</div>}
+                  {entityType && (
+                    <div className={styles.cardPart}>
+                      <Text className={styles.cardLabel}>{t('mappings.columns.crm')}</Text>
+                      {crmCell(r)}
+                    </div>
+                  )}
+                  {entityType && actionsCell(r)}
+                </li>
+              ))}
+            </ul>
+          )}
+          {listEnd}
+        </>
       ) : (
         <ScrollTable>
           <Table className={mergeClasses(table.min880, table.roomy)} aria-label={t('mappings.title')} aria-busy={stale || undefined}>
@@ -222,108 +364,17 @@ export function MappingsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => {
-                const route = r.link ? entityRoute(r.externalType, r.link.entityId) : null;
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <Text className={styles.name}>{r.displayName}</Text>
-                      <span className={styles.meta}>
-                        <span className={styles.muted}>
-                          #{r.externalId} · {formatDateTime(r.externalChangedAt ?? r.lastSeenAt)}
-                        </span>{' '}
-                        {r.isGone && (
-                          <Badge size="small" appearance="outline">
-                            {t('mappings.gone')}
-                          </Badge>
-                        )}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {r.orgNumber && <Text block className="tabular">{formatOrgNumber(r.orgNumber)}</Text>}
-                      {r.email && <Text block className={styles.muted}>{r.email}</Text>}
-                      {r.domain && <Text block className={styles.muted}>{r.domain}</Text>}
-                    </TableCell>
-                    <TableCell>
-                      {r.link ? (
-                        <span>
-                          {route ? <AppLink to={route}>{r.link.entityName ?? r.link.entityId}</AppLink> : r.link.entityName}{' '}
-                          <Text className={styles.muted}>({t(`mappings.methods.${r.link.method}`)})</Text>
-                        </span>
-                      ) : r.suggestions.length > 0 ? (
-                        <span className={styles.suggestions}>
-                          {r.suggestions.map((s) => {
-                            const reasons = s.reasons.map((x) => t(`mappings.reasons.${x}`, { defaultValue: x })).join(', ');
-                            return (
-                              // A suggested CRM record: its name and why it matches, the link button at the end of the row.
-                              <span key={s.entityId} className={styles.suggestion}>
-                                <span className={styles.suggestionText}>
-                                  <span className={styles.suggestionName}>{s.name}</span>
-                                  <span className={styles.muted}>{reasons}</span>
-                                </span>
-                                <Button
-                                  size="small"
-                                  className={styles.suggestionAction}
-                                  aria-label={`${t('mappings.linkTo', { name: s.name })} · ${reasons}`}
-                                  onClick={() =>
-                                    void run(
-                                      () => actions.link.mutateAsync({ system, externalType: type, externalId: r.externalId, entityId: s.entityId }),
-                                      () => t('mappings.linked'),
-                                    )
-                                  }
-                                >
-                                  {t('mappings.link')}
-                                </Button>
-                              </span>
-                            );
-                          })}
-                        </span>
-                      ) : (
-                        <Text className={styles.muted}>{entityType ? t('mappings.noSuggestion') : ''}</Text>
-                      )}
-                    </TableCell>
-                    {entityType && (
-                      <TableCell>
-                        <span className={styles.actions}>
-                          {r.link ? (
-                            <Button size="small" appearance="subtle" onClick={() => void run(() => actions.unlink.mutateAsync(r.link!.linkId), () => t('mappings.unlinked'))}>
-                              {t('mappings.unlink')}
-                            </Button>
-                          ) : (
-                            <>
-                              {(entityType === 'Organization' || entityType === 'Product') && (
-                                <Button {...restoreFocusTarget} size="small" onClick={() => setPicking(r)}>
-                                  {t('mappings.pick')}
-                                </Button>
-                              )}
-                              <Button
-                                size="small"
-                                onClick={() =>
-                                  void run(() => actions.importOne.mutateAsync({ system, type, externalId: r.externalId }), () => t('mappings.imported'))
-                                }
-                                disabled={actions.importOne.isPending}
-                              >
-                                {t('mappings.import')}
-                              </Button>
-                            </>
-                          )}
-                        </span>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                );
-              })}
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell>{externalCell(r)}</TableCell>
+                  <TableCell>{keysCell(r)}</TableCell>
+                  <TableCell>{crmCell(r)}</TableCell>
+                  {entityType && <TableCell>{actionsCell(r)}</TableCell>}
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
-          {loading && <Spinner className={styles.more} />}
-          {!loading && rows.length === 0 && <EmptyState message={t('mappings.empty')} icon={<PlugDisconnected24Regular />} />}
-          {records.hasNextPage && (
-            <div className={styles.more}>
-              <Button onClick={() => void records.fetchNextPage()} disabled={records.isFetchingNextPage}>
-                {t('common.loadMore')}
-              </Button>
-            </div>
-          )}
+          {listEnd}
         </ScrollTable>
       )}
 

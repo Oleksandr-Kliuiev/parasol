@@ -19,11 +19,13 @@ internal sealed class NoDelegatedToken : IDelegatedTokenSource
     public Task<string?> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken cancellationToken) => Task.FromResult<string?>(null);
 }
 
-internal sealed class GraphDelegatedAuthenticationHandler(IDelegatedTokenSource tokens, Microsoft.Extensions.Options.IOptions<GraphOptions> options) : DelegatingHandler
+/// <summary>
+/// Puts the signed-in person's token on a request, for the scopes of one feature: each feature asks only for its own, so consent missing
+/// for one (the files, M47) never switches off another (the calendar).
+/// </summary>
+internal abstract class DelegatedAuthenticationHandler(
+    IDelegatedTokenSource tokens, Microsoft.Extensions.Options.IOptions<GraphOptions> options, IReadOnlyList<string> scopes) : DelegatingHandler
 {
-    /// <summary>Scopes the delegated features need; consent is granted once for the application (docs/05 §1.3).</summary>
-    public static readonly string[] Scopes = ["Calendars.ReadWrite", "Mail.Read"];
-
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         if (!GraphLinks.IsSameOrigin(options.Value.BaseUrl, request.RequestUri))
@@ -31,14 +33,29 @@ internal sealed class GraphDelegatedAuthenticationHandler(IDelegatedTokenSource 
             throw new InvalidOperationException("A request outside the configured Graph address was refused before a token was attached.");
         }
 
-        var token = await tokens.GetTokenAsync(Scopes, cancellationToken)
+        var token = await tokens.GetTokenAsync(scopes, cancellationToken)
                     ?? throw new Crm.Activities.Contracts.UserNotConnectedException("Microsoft Graph");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return await base.SendAsync(request, cancellationToken);
     }
 }
 
-/// <summary>Settings of the SharePoint library that holds a folder per customer (FR-DOC-01).</summary>
+/// <summary>The calendar and the mailbox (S10).</summary>
+internal sealed class GraphDelegatedAuthenticationHandler(IDelegatedTokenSource tokens, Microsoft.Extensions.Options.IOptions<GraphOptions> options)
+    : DelegatedAuthenticationHandler(tokens, options, Scopes)
+{
+    /// <summary>Scopes the delegated features need; consent is granted once for the application (docs/05 §1.3).</summary>
+    public static readonly string[] Scopes = ["Calendars.ReadWrite", "Mail.Read"];
+}
+
+/// <summary>The customers' folders, read as the person who looks at them (M47): what they may not open in SharePoint, the card does not show.</summary>
+internal sealed class GraphFilesAuthenticationHandler(IDelegatedTokenSource tokens, Microsoft.Extensions.Options.IOptions<GraphOptions> options)
+    : DelegatedAuthenticationHandler(tokens, options, Scopes)
+{
+    public static readonly string[] Scopes = ["Files.Read.All"];
+}
+
+/// <summary>Settings of the SharePoint library that holds a folder per customer (FR-DOC-01, M47).</summary>
 public sealed class GraphSharePointOptions
 {
     public bool Enabled { get; set; }
@@ -50,6 +67,27 @@ public sealed class GraphSharePointOptions
     public string? DriveId { get; set; }
 
     public string DriveName { get; set; } = "Dokumenter";
+
+    /// <summary>
+    /// The folder inside the library that holds the customers' folders, e.g. <c>Kunder</c> (M47); empty is the library itself. The mapping
+    /// screen lists its folders, and a new customer folder is created there.
+    /// </summary>
+    public string? RootFolder { get; set; }
+
+    /// <summary>Folders of the root folder for the mapping screen (<c>sharepoint-folders</c>), once an hour.</summary>
+    public string FolderSyncCron { get; set; } = "40 * * * *";
+
+    /// <summary>Creating and renaming folders (M39.1 switches): off until switched on, like every vendor's writes.</summary>
+    public bool WriteEnabled { get; set; }
+
+    /// <summary>The worker reads SharePoint and says what it would do, without creating or renaming anything.</summary>
+    public bool DryRun { get; set; }
+
+    /// <summary>CRM organization ids a folder may be created for; empty = every customer.</summary>
+    public IList<string> WriteAllowedCustomerIds { get; } = [];
+
+    /// <summary>The action kinds that are switched on (<see cref="SharePointActionKinds"/>); a kind not listed is refused.</summary>
+    public IList<string> EnabledActions { get; } = [];
 }
 
 /// <summary>Workflows webhooks for the team's channels (FR-ACT-04).</summary>

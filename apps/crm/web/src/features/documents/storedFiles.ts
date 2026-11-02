@@ -10,7 +10,8 @@ export function reportMonth(periodStart: string): string {
 }
 
 export function fileSize(bytes: number): string {
-  return bytes < 1024 * 1024 ? `${formatNumber(Math.max(1, Math.round(bytes / 1024)), 0)} KB` : `${formatNumber(bytes / (1024 * 1024), 1)} MB`;
+  // An empty file says 0 KB; anything else at least 1 KB.
+  return bytes < 1024 * 1024 ? `${formatNumber(bytes === 0 ? 0 : Math.max(1, Math.round(bytes / 1024)), 0)} KB` : `${formatNumber(bytes / (1024 * 1024), 1)} MB`;
 }
 
 /** One download at a time of the customer's stored reports (M43), with what is being fetched and whether the last one failed. */

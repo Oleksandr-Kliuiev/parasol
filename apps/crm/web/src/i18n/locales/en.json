@@ -823,6 +823,7 @@
       "brreg-registry-check": "Registry status check (Brønnøysund)",
       "entra-user-sync": "User synchronization (Entra ID)",
       "entra-role-sync": "Role synchronization (Entra ID)",
+      "sharepoint-folders": "Customer folders (SharePoint)",
       "atera-customers": "Customers (Atera)",
       "atera-contacts": "Contacts (Atera)",
       "poweroffice-customers": "Customers (PowerOffice)",
@@ -886,6 +887,7 @@
     "poweroffice": "PowerOffice Go",
     "atera": "Atera",
     "microsoft-graph": "Microsoft Entra ID",
+    "graph": "SharePoint",
     "brreg": "Brønnøysund Register Centre",
     "partnercenter": "Microsoft Partner Center",
     "huntress": "Huntress",
@@ -896,7 +898,8 @@
     "ContactPerson": "Contact persons",
     "Contact": "Contacts",
     "Product": "Products",
-    "Organization": "Organizations"
+    "Organization": "Organizations",
+    "Folder": "Folders"
   },
   "mappings": {
     "title": "Mappings",
@@ -951,6 +954,7 @@
     "bulkDone": "Linked {{linked}}, created {{created}}, skipped {{skipped}}, failed {{failed}}",
     "autoLinkDone": "Linked {{linked}}; {{skipped}} without an exact match",
     "empty": "No records. They appear after the first synchronization.",
+    "noMatch": "No records match the search.",
     "pickProductTitle": "Link to a CRM product",
     "filtersLabel": "Filter the records",
     "stateLabel": "Link state",
@@ -2825,11 +2829,33 @@
   "documents": {
     "title": "Documents in SharePoint",
     "notConfigured": "SharePoint is not set up for the CRM yet.",
-    "noFolder": "The customer has no folder yet.",
+    "noFolder": "The customer is not linked to a folder yet.",
+    "noFolderHint": "If the customer already has a folder in SharePoint, link it. Otherwise, create a new one.",
+    "noFolderLinkHint": "If the customer already has a folder in SharePoint, link it. Creating folders from Parasoll is not switched on.",
+    "noFolderAskHint": "Whoever manages the integrations in Parasoll can create a folder or link the customer to one that exists.",
     "createFolder": "Create folder",
-    "folderCreated": "The folder is created",
+    "createFolderTitle": "Create a folder in SharePoint",
+    "linkExisting": "Link an existing folder",
+    "linkInstead": "Does the customer already have a folder, perhaps under another name? Link it instead.",
     "openInSharePoint": "Open in SharePoint",
     "empty": "The folder is empty.",
+    "more": "Showing the first {{count}} items. Open the folder in SharePoint to see the rest.",
+    "gone": "The folder the customer is linked to was deleted or moved in SharePoint.",
+    "goneAskHint": "Whoever manages the integrations in Parasoll can remove the link and give the customer a new folder.",
+    "unlink": "Remove the link",
+    "unlinkTitle": "Remove the link to the folder?",
+    "unlinkBody": "The customer is unlinked from the folder in Parasoll. Nothing is deleted in SharePoint. Afterwards you can create a new folder or link another one.",
+    "keepLink": "Keep the link",
+    "unlinked": "The link was removed",
+    "noAccess": "SharePoint does not let you open the folder.",
+    "noAccessHint": "Parasoll shows only what you can open in SharePoint yourself. Ask whoever manages SharePoint for access.",
+    "notConnected": "Parasoll cannot read SharePoint for you.",
+    "notConnectedHint": "Parasoll reads the folders with your own access. If signing in again does not help, an administrator has to give Parasoll access to the files in Microsoft 365.",
+    "signInAgain": "Sign in again",
+    "unavailable": "SharePoint did not answer. Try again in a moment.",
+    "rootFolder": "the folder “{{root}}”",
+    "libraryRoot": "the document library",
+    "folderKind": "folder",
     "fields": {
       "name": "Name",
       "size": "Size",
@@ -5203,6 +5229,11 @@
           "other": "Restore elsewhere",
           "in-place": "Restore in place"
         }
+      },
+      "graph": {
+        "folder": {
+          "create": "Create the folder in SharePoint"
+        }
       }
     },
     "effects": {
@@ -5274,7 +5305,8 @@
       "VND_EFFECT_HUNTRESS_AGENTS_LATER": "Machines appear only once the Huntress agent is installed with the key {{key}} — that is done in Atera, outside Parasoll.",
       "VND_EFFECT_CLOUDALLY_ACCOUNT_CREATE": "CloudAlly gets the account “{{name}}” for {{email}} in the data center {{region}}, opened as a trial account.",
       "VND_EFFECT_CLOUDALLY_PASSWORD": "CloudAlly requires a password: Parasoll makes a random one and keeps it nowhere. You reach the account through CloudAlly’s partner portal; the customer can set their own with “Forgot password”.",
-      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Backups start only once the customer has given CloudAlly access to Microsoft 365 and the backup tasks are set up — that is done in CloudAlly, outside Parasoll."
+      "VND_EFFECT_CLOUDALLY_CONSENT_LATER": "Backups start only once the customer has given CloudAlly access to Microsoft 365 and the backup tasks are set up — that is done in CloudAlly, outside Parasoll.",
+      "VND_EFFECT_SHAREPOINT_FOLDER_CREATE": "SharePoint gets the folder “{{name}}” in {{root}}."
     }
   },
   "tickets": {
@@ -5752,7 +5784,7 @@
     "intro": "Choose what Parasoll creates for {{customer}}. Each service is linked to the customer at once; what the vendors’ APIs cannot do is listed at the end.",
     "loading": "Reading the customer’s services…",
     "loadError": "The services could not be read.",
-    "noneEnabled": "None of Atera, Huntress or CloudAlly is connected to Parasoll in this installation.",
+    "noneEnabled": "None of Atera, Huntress, CloudAlly or SharePoint is connected to Parasoll in this installation.",
     "linked": "Linked to “{{name}}”",
     "linkedId": "Linked to #{{id}}; its name comes with the next read of {{system}}.",
     "linkedBadge": "Linked",
@@ -5766,7 +5798,13 @@
       "VND_CUSTOMER_NOT_ALLOWED": "{{system}} only takes changes for the test customers for now.",
       "VND_FORBIDDEN": "Your access does not include creating customers in {{system}}.",
       "VND_EXISTS_AT_VENDOR": "{{system}} already has “{{name}}”, not linked to any customer. Link it under Mappings instead.",
-      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first."
+      "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first.",
+      "graph": {
+        "VND_KIND_DISABLED": "Creating folders in SharePoint is not switched on in this installation.",
+        "VND_FORBIDDEN": "Your access does not include creating folders in SharePoint.",
+        "VND_EXISTS_AT_VENDOR": "SharePoint already has the folder “{{name}}”, not linked to any customer. Link it under Mappings instead.",
+        "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer’s folder in SharePoint has no outcome yet. Settle it in the action log first."
+      }
     },
     "atera": {
       "note": "Name, organization number and contact details come from the customer card."
@@ -5781,6 +5819,9 @@
       "emailHint": "CloudAlly sends the account’s reports to this address. One account per address: use a separate address for each customer, one your firm controls.",
       "emailInvalid": "Enter an e-mail address.",
       "region": "Data center"
+    },
+    "graph": {
+      "note": "The folder “{{name}}” is created in {{root}} and linked to the customer."
     },
     "regions": {
       "EU": "EU",
@@ -5820,7 +5861,12 @@
         "VND_EXISTS_AT_VENDOR": "{{system}} already has a record for this customer that no customer is linked to. If it is this one, link it under Mappings.",
         "VND_AMBIGUOUS_AT_VENDOR": "{{system}} has several records that could be this customer. Link the right one under Mappings.",
         "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer in {{system}} has no outcome yet. Settle it in the action log first.",
-        "VND_ALREADY_CONNECTED": "The customer is already linked to {{system}}."
+        "VND_ALREADY_CONNECTED": "The customer is already linked to {{system}}.",
+        "graph": {
+          "VND_EXISTS_AT_VENDOR": "SharePoint already has a folder named for this customer that no customer is linked to. If it is this one, link it under Mappings.",
+          "VND_AMBIGUOUS_AT_VENDOR": "SharePoint has several folders that could be this customer’s. Link the right one under Mappings.",
+          "VND_EARLIER_ATTEMPT_OPEN": "An earlier request to create the customer’s folder in SharePoint has no outcome yet. Settle it in the action log first."
+        }
       }
     },
     "result": {

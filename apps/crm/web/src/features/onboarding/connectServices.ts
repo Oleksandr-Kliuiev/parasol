@@ -101,7 +101,15 @@ export const mappingsOf: Record<string, string> = {
   atera: '/admin/mappings?system=atera&type=Customer',
   huntress: '/admin/mappings?system=huntress&type=Organization',
   cloudally: '/admin/mappings?system=cloudally&type=Customer',
+  graph: '/admin/mappings?system=graph&type=Folder',
 };
+
+/** The mapping screen's list, searched for the vendor's record named like the customer when one blocks creating it. */
+export const mappingsFor = (system: string, existing?: string | null): string | undefined =>
+  mappingsOf[system] && (existing ? `${mappingsOf[system]}&search=${encodeURIComponent(existing)}` : mappingsOf[system]);
+
+/** The vendors whose setup goes on outside Parasoll once they have the customer; a SharePoint folder (M47) is ready as it is made. */
+export const stepsOutside: ReadonlySet<string> = new Set(['atera', 'huntress', 'cloudally']);
 
 /** The vendor action that creates the customer (M39.1 path): its target is the CRM organization. */
 export function createRequest(choice: CreateChoice, organizationId: string): ActionRequest {

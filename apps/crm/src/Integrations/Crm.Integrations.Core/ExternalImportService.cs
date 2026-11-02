@@ -28,6 +28,11 @@ public sealed class ExternalImportService(
             return NotConfigured(system, type);
         }
 
+        if (!resolved.Descriptor.Importable)
+        {
+            return NotImportable(system, type);
+        }
+
         var record = await db.ExternalRecords.AsNoTracking()
             .SingleOrDefaultAsync(r => r.System == system && r.ExternalType == type && r.ExternalId == externalId, cancellationToken);
         if (record is null)
@@ -137,6 +142,11 @@ public sealed class ExternalImportService(
         if (Resolve(system, type) is not { } resolved)
         {
             return NotConfigured(system, type);
+        }
+
+        if (!resolved.Descriptor.Importable)
+        {
+            return NotImportable(system, type);
         }
 
         var unlinked = await UnlinkedAsync(system, type, cancellationToken);
@@ -337,4 +347,8 @@ public sealed class ExternalImportService(
 
     private static Error NotConfigured(string system, string type) =>
         Error.NotFound("INT_NOT_FOUND", $"'{system}/{type}' is not a known record type.");
+
+    /// <summary>A type that is only linked (a SharePoint folder, M47): it never becomes a new CRM record.</summary>
+    private static Error NotImportable(string system, string type) =>
+        Error.Conflict("INT_NOT_IMPORTABLE", $"'{system}/{type}' records are linked to existing CRM records only; they are never imported.");
 }

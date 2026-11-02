@@ -318,7 +318,7 @@ export function OrganizationDetailPage() {
           setParams(next, { replace: true });
         }} />}
       {tab === 'mail' && canActivities && <OrganizationMailTab organizationId={organization.id} />}
-      {tab === 'documents' && <OrganizationDocumentsTab organizationId={organization.id} />}
+      {tab === 'documents' && <OrganizationDocumentsTab organizationId={organization.id} organizationName={organization.name} />}
       {tab === 'history' && <HistoryList module="customers" entityType="Organization" entityId={organization.id} />}
 
       <Dialog open={confirmOpen} onOpenChange={(_, d) => setConfirmOpen(d.open)}>

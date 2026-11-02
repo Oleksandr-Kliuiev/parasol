@@ -12,7 +12,7 @@ const stored = (overrides: Partial<StoredDocument> = {}): StoredDocument => ({
   fileName: 'huntress-2026-09-9001.pdf', length: 245_760, provenance: 'Source', storedAt: '2026-10-01T03:55:00Z', ...overrides,
 });
 
-const sharePoint = { available: false, folder: null, items: [] };
+const sharePoint = { available: false, state: 'NoFolder', linkId: null, folder: null, items: [], more: false };
 
 afterEach(() => {
   vi.unstubAllGlobals();

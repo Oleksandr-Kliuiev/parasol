@@ -204,16 +204,32 @@ dotnet user-secrets set "Integrations:PartnerCenter:RefreshToken" "<refresh toke
 3. Общие ящики, которые нужно просматривать в карточке клиента, перечислить в `Integrations:MicrosoftGraph:SharedMailboxes` (сотрудник должен иметь к ним доступ в Exchange; иначе ящик просто пропускается).
 4. Проверка: у встречи включить «Добавить в мой календарь Outlook» — событие появляется в Outlook с приглашением контакта; перенести встречу в Outlook и нажать «Получить изменения из Outlook» — время в CRM меняется; вкладка «Почта» показывает переписку, «Сохранить в CRM» создаёт активность-письмо со ссылкой.
 
-### 4b.2 Документы в SharePoint
-1. Создать сайт «Kunder» и библиотеку «Dokumenter».
-2. Дать управляемым идентичностям `id-crm-worker-<env>` (создаёт и переименовывает папки) и `id-crm-app-<env>` (вкладка «Документы») разрешение `Sites.Selected` и выдать каждой доступ **только к этому сайту**:
+### 4b.2 Документы в SharePoint (M47)
+Порядок и объём — `docs/migration/M47-SHAREPOINT-FOUNDATION.md`. Каждый шаг с разрешениями Entra — отдельное согласие владельца.
+1. Папки клиентов лежат в одной корневой папке библиотеки (у Vardahei: корневой сайт, библиотека «Dokumenter», папка «Kunder»).
+   Идентификаторы: `GET /sites/{домен}:/` (корневой сайт) или `GET /sites/{домен}:/sites/{имя}` → `id`; `GET /sites/{siteId}/drives`
+   → `id` библиотеки.
+2. Регистрации приложения с сертификатом (та же, что у синхронизации пользователей, или отдельная) дать `Sites.Selected` (Application)
+   с согласием администратора и роль **только на этот сайт**:
    ```http
    POST https://graph.microsoft.com/v1.0/sites/{siteId}/permissions
    { "roles": ["write"], "grantedToIdentities": [ { "application": { "id": "<appId>", "displayName": "Vardahei CRM" } } ] }
    ```
-3. Узнать идентификаторы: `GET /sites/{домен}:/sites/Kunder` → `id`; `GET /sites/{siteId}/drives` → `id` библиотеки.
-4. Настройки: `Integrations:MicrosoftGraph:SharePoint:Enabled=true`, `:SiteId`, `:DriveId` (или `:DriveName`, по умолчанию `Dokumenter`).
-5. Проверка: сделать организацию клиентом — папка `Название (оргномер)` появляется в библиотеке; переименовать организацию — папка переименовывается; вкладка «Документы» показывает содержимое и открывает SharePoint.
+   PFX монтируется только в crm-worker (`Integrations:MicrosoftGraph:CertificatePath`, абсолютный путь; `deploy/hostinger/README.md`).
+   crm-web сертификат для SharePoint не нужен.
+3. Регистрации входа `Vardahei CRM` добавить делегированное `Files.Read.All` и выдать согласие администратора. Без него вкладка у всех
+   говорит «Parasoll får ikke lese SharePoint for deg.», а не «нет папки».
+4. Настройки web и worker: `Integrations:MicrosoftGraph:SharePoint:Enabled=true`, `:SiteId`, `:DriveId` (или `:DriveName`, по умолчанию
+   `Dokumenter`), `:RootFolder=Kunder`; worker — при желании `:FolderSyncCron` (по умолчанию `40 * * * *`). Запись остаётся выключенной.
+5. Первый список: задача `sharepoint-folders` («Bakgrunnsjobber») или ближайшие :40; на `/connections` у SharePoint появляется время
+   чтения. На «Koblinger» → SharePoint → «Mapper» связать старые папки: «Koble eksakte treff» — для папок с оргномером в имени,
+   остальные — по подсказке имени или через «Velg organisasjon…».
+6. Создание папок: `:WriteEnabled=true`, `:EnabledActions:0=folder.create`; для пробы сначала `:DryRun=true` или
+   `:WriteAllowedCustomerIds` с id тестовой организации CRM.
+7. Проверка: вкладка «Dokumenter» связанного клиента показывает содержимое (первые 200, затем «Viser de første 200 …») и открывает
+   SharePoint; у клиента без папки «Opprett mappe» показывает предпросмотр «SharePoint får mappen «Navn (orgnr)» i mappen «Kunder».», после
+   подтверждения папка есть в SharePoint и на вкладке; у клиента со старой папкой под своим именем создание остановлено и ведёт на
+   «Koblinger»; переименование клиента переименовывает только папку в форме CRM; сотрудник без доступа к папке видит «нет доступа».
 
 ### 4b.3 Сообщения в каналы Teams
 1. В каждом канале («Salg», «Økonomi», «Drift») создать поток Power Automate «When a Teams webhook request is received» и скопировать URL (это секрет — в Key Vault; сообщения отправляет worker, поэтому секрет получает только он — [runbook 08 §3](08-database-permissions.md#3-новый-модуль-таблица-или-секрет)). Секреты Key Vault: `teams-webhook-sales`, `teams-webhook-finance`, `teams-webhook-operations`; включение — переменная окружения GitHub `CRM_ENABLE_TEAMS=true` (Bicep передаёт `Integrations__MicrosoftGraph__Teams__Channels__*` ссылками Key Vault только `crm-worker`; все три секрета должны существовать).

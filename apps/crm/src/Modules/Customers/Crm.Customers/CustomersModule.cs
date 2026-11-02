@@ -191,13 +191,14 @@ public static class CustomersModule
 
     private static void MapDocuments(RouteGroupBuilder group)
     {
-        group.MapGet("/organizations/{id:guid}/documents", async (Guid id, OrganizationDocumentsService service, CancellationToken ct) =>
-                Results.Ok(await service.ListAsync(id, ct)))
+        // M47: read live with the person's own SharePoint access, never cached (the answer names their files). A folder is created through
+        // the vendor action folder.create of the Graph integration, not here.
+        group.MapGet("/organizations/{id:guid}/documents", async (Guid id, OrganizationDocumentsService service, HttpResponse response, CancellationToken ct) =>
+            {
+                response.Headers.CacheControl = "no-store";
+                return Results.Ok(await service.ListAsync(id, ct));
+            })
             .RequirePermission(Permissions.CustomersRead);
-
-        group.MapPost("/organizations/{id:guid}/documents/folder", async (Guid id, OrganizationDocumentsService service, CancellationToken ct) =>
-                (await service.CreateFolderAsync(id, ct)).ToHttpResult(Results.Ok))
-            .RequirePermission(Permissions.CustomersWrite);
 
         // M43: the monthly reports the CRM filed itself. They describe the customer's IT (devices, incidents, backups), so reading
         // them takes the Drift right as well as the customer's (two calls: both are required).

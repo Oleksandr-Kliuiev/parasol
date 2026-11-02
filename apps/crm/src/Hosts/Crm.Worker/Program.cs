@@ -130,6 +130,12 @@ jobs.AddOrUpdate<EntraRoleSyncJob>(
     job => job.RunAsync(CancellationToken.None),
     app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.RoleSyncCron,
     new RecurringJobOptions { TimeZone = oslo });
+// M47: the folders of the customers' root folder in SharePoint, for the mapping screen (skipped while SharePoint is not configured).
+jobs.AddOrUpdate<SharePointFolderSyncJob>(
+    SharePointFolderSyncJob.JobId,
+    job => job.RunAsync(CancellationToken.None),
+    app.Services.GetRequiredService<IOptions<GraphOptions>>().Value.SharePoint.FolderSyncCron,
+    new RecurringJobOptions { TimeZone = oslo });
 
 // DEV-11: erasures lost by a database restore are applied again (and checked every few minutes, so a restore is caught even
 // without a worker restart); the nightly retention job counts — and only with approved policies and Apply mode removes.

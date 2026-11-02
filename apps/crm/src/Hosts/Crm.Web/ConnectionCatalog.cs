@@ -51,6 +51,8 @@ internal sealed class ConnectionCatalog(
                 .. partner.BillingReconciliationEnabled ? [PartnerBillingSyncJob.JobId] : Array.Empty<string>(),
             ]),
             new(EntraUserSyncJob.System, graph.Value.Enabled, null, [EntraUserSyncJob.JobId, EntraRoleSyncJob.JobId]),
+            // M47: the customers' folders in SharePoint, read for the mapping screen; folders are created and renamed when writing is on.
+            new(SharePointTypes.System, graph.Value.SharePointEnabled, graph.Value.SharePoint.WriteEnabled, [SharePointFolderSyncJob.JobId]),
             // The open register has no switch: it is always read.
             new(BrregRegistryCheckJob.System, true, null, [BrregRegistryCheckJob.JobId]),
         ];

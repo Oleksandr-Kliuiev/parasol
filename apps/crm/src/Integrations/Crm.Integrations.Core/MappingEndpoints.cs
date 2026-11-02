@@ -78,7 +78,11 @@ public sealed record IntegrationStatusItem(
     bool Paused,
     string? PauseReason,
     DateTimeOffset? PausedAt,
-    string? PausedBy);
+    string? PausedBy)
+{
+    /// <summary>The record types that may become new CRM records; the others are only linked (M47: SharePoint folders).</summary>
+    public IReadOnlyList<string> ImportableTypes { get; init; } = [];
+}
 
 public sealed record PauseIntegrationRequest(bool Paused, string? Reason);
 
@@ -115,7 +119,10 @@ public static class MappingEndpoints
                         pause?.IsPaused ?? false,
                         pause?.IsPaused == true ? pause.Reason : null,
                         pause?.IsPaused == true ? pause.PausedAt : null,
-                        pause?.IsPaused == true ? pause.PausedBy : null));
+                        pause?.IsPaused == true ? pause.PausedBy : null)
+                    {
+                        ImportableTypes = adapter.RecordTypes.Where(t => t.Importable).Select(t => t.ExternalType).ToList(),
+                    });
                 }
 
                 return Results.Ok(result);

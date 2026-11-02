@@ -230,21 +230,46 @@ public sealed record DocumentFolder(string FolderId, string Name, string WebUrl)
 public sealed record DocumentItem(
     string Id, string Name, bool IsFolder, long? Size, DateTimeOffset? ModifiedAt, string? ModifiedBy, string WebUrl);
 
+/// <summary>How reading the customer's folder ended (M47): each is worded on the card, so a folder that could not be read never looks absent.</summary>
+public enum DocumentFolderState
+{
+    /// <summary>The customer is linked to no folder yet.</summary>
+    NoFolder,
+
+    /// <summary>The folder and its first page were read.</summary>
+    Ready,
+
+    /// <summary>The linked folder was not found: deleted in SharePoint, or out of the person's reach.</summary>
+    Gone,
+
+    /// <summary>No delegated token for the person: the development sign-in, or consent not given yet.</summary>
+    NotConnected,
+
+    /// <summary>SharePoint refused the person.</summary>
+    NoAccess,
+
+    /// <summary>SharePoint did not answer in time or failed; reading again may work.</summary>
+    Unavailable,
+}
+
 /// <summary>
-/// The document library that holds a folder per customer (FR-DOC-01). Implemented by the Microsoft Graph integration,
-/// which also owns the link between the organization and the folder; the Customers module only asks.
+/// The customer's folder as the signed-in person sees it: the state, the link (so a stale one can be taken off), the folder and its first
+/// page, folders first. <paramref name="More"/> says the folder holds more than the page.
+/// </summary>
+public sealed record DocumentListing(DocumentFolderState State, Guid? LinkId, DocumentFolder? Folder, IReadOnlyList<DocumentItem> Items, bool More)
+{
+    public static DocumentListing Of(DocumentFolderState state, Guid? linkId = null) => new(state, linkId, null, [], false);
+}
+
+/// <summary>
+/// The document library that holds a folder per customer (FR-DOC-01). Implemented by the Microsoft Graph integration, which also owns
+/// the link between the organization and the folder; the Customers module only asks. Creating a folder is a vendor action (M47).
 /// </summary>
 public interface IDocumentLibrary
 {
     /// <summary>False when SharePoint is not configured; the card then explains that instead of failing.</summary>
     bool IsAvailable { get; }
 
-    /// <summary>The folder of an organization, or null when it has not been created yet.</summary>
-    Task<DocumentFolder?> GetFolderAsync(Guid organizationId, CancellationToken cancellationToken);
-
-    /// <summary>Creates the folder (named "{organization} ({org number})") if it is missing, and links it.</summary>
-    Task<DocumentFolder> EnsureFolderAsync(Guid organizationId, CancellationToken cancellationToken);
-
-    /// <summary>Contents of the customer's folder, folders first; empty when there is no folder yet.</summary>
-    Task<IReadOnlyList<DocumentItem>> ListAsync(Guid organizationId, CancellationToken cancellationToken);
+    /// <summary>The customer's folder and its first page, read live with the signed-in person's own access.</summary>
+    Task<DocumentListing> ReadAsync(Guid organizationId, CancellationToken cancellationToken);
 }

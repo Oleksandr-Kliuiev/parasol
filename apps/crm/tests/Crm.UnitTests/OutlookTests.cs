@@ -75,7 +75,7 @@ public class GraphMappingTests
     [InlineData("Kunde / Avdeling", null, "Kunde - Avdeling")]
     public void A_customer_folder_is_named_after_the_organization(string name, string? orgNumber, string expected)
     {
-        GraphDocuments.FolderName(name, orgNumber).ShouldBe(expected);
+        SharePointNames.FolderName(name, orgNumber).ShouldBe(expected);
     }
 
     [Fact]

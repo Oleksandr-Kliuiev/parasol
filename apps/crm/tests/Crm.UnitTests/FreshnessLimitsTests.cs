@@ -51,6 +51,8 @@ public class FreshnessLimitsTests
         (PartnerBillingSyncJob.JobId, Key(PartnerCenterOptions.SectionName, nameof(PartnerCenterOptions.BillingSyncCron)), new PartnerCenterOptions().BillingSyncCron),
         (EntraUserSyncJob.JobId, Key(GraphOptions.SectionName, nameof(GraphOptions.UserSyncCron)), new GraphOptions().UserSyncCron),
         (EntraRoleSyncJob.JobId, Key(GraphOptions.SectionName, nameof(GraphOptions.RoleSyncCron)), new GraphOptions().RoleSyncCron),
+        (SharePointFolderSyncJob.JobId, Key($"{GraphOptions.SectionName}:{nameof(GraphOptions.SharePoint)}", nameof(GraphSharePointOptions.FolderSyncCron)),
+            new GraphSharePointOptions().FolderSyncCron),
         // A fixed schedule: no setting to read.
         (BrregRegistryCheckJob.JobId, null, BrregRegistryCheckJob.Cron),
     ];
