@@ -53,6 +53,17 @@ public sealed class GraphOptions
 
     public GraphTeamsOptions Teams { get; set; } = new();
 
+    /// <summary>
+    /// The application identity's settings are all there (tenant, client and an absolute certificate path), as
+    /// <see cref="FileGraphCredential"/> needs them; only crm-worker holds them.
+    /// </summary>
+    public bool HasApplicationCredential =>
+        !string.IsNullOrWhiteSpace(TenantId) && !string.IsNullOrWhiteSpace(ClientId) &&
+        !string.IsNullOrWhiteSpace(CertificatePath) && Path.IsPathFullyQualified(CertificatePath);
+
+    /// <summary>SharePoint is switched on with a site (M47); whether this instance can also write is <see cref="HasApplicationCredential"/>.</summary>
+    public bool SharePointEnabled => Enabled && SharePoint.Enabled && !string.IsNullOrWhiteSpace(SharePoint.SiteId);
+
     /// <summary>Startup check (F-G4-16): the Graph address is https and every Teams webhook is https on an allowed host.</summary>
     internal bool IsValid(out string problem)
     {

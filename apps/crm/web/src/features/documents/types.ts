@@ -35,9 +35,22 @@ export interface StoredDocument {
   storedAt: string;
 }
 
+/**
+ * How reading the customer's folder ended (M47). Each is worded on the tab, so a folder that could not be read never looks absent:
+ * no folder linked yet, read, gone from SharePoint (or out of the person's reach), no token for this sign-in, refused, no answer.
+ */
+export const documentFolderStates = ['NoFolder', 'Ready', 'Gone', 'NotConnected', 'NoAccess', 'Unavailable'] as const;
+export type DocumentFolderState = (typeof documentFolderStates)[number];
+
 export interface OrganizationDocuments {
   /** False when SharePoint is not configured; the tab then explains that instead of showing an empty list. */
   available: boolean;
+  state: DocumentFolderState;
+  /** The link to the folder, so a person may take a stale one off; null when the customer has none. */
+  linkId: string | null;
   folder: DocumentFolder | null;
+  /** The first page of the folder, folders first. */
   items: DocumentItem[];
+  /** The folder holds more than the page: the tab says so and leads to SharePoint for the rest. */
+  more: boolean;
 }

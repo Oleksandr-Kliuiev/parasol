@@ -47,7 +47,8 @@
 | `Mail.Read` | Delegated | R2 (S10) | Переписка с клиентом в карточке (только метаданные) |
 | `Mail.Send` | Delegated | R2 (альтернатива) | Отправка предложений от имени вошедшего пользователя — если политика доступа приложения к ящикам продавцов окажется неприемлемой (S10) |
 | `Mail.Read` | Application + **RBAC for Applications в Exchange Online**, ограниченный общими ящиками (`support@`, `salg@`) | R2 | Привязка писем общих ящиков |
-| `Sites.Selected` | Application | R2 (S10) | Доступ только к сайту SharePoint «Kunder» (выдаётся точечно на сайт) |
+| `Sites.Selected` | Application — регистрация приложения с сертификатом, **сертификат только у crm-worker** | R2 (S10), M47 | Роль `write` только на сайт с папками клиентов: список корневой папки, создание и переименование папок |
+| `Files.Read.All` | Delegated | M47 | Вкладка «Dokumenter»: папка клиента читается токеном сотрудника, поэтому он видит только то, что может открыть в SharePoint |
 | `TeamsActivity.Send` | Application | R2 | Персональные уведомления в ленте активности Teams (требует Teams-приложение CRM) |
 | `PartnerBilling.Read.All` | Application | R2 | Экспорт billed/unbilled reconciliation |
 
@@ -70,15 +71,15 @@
 - **Синхронизация пользователей** (задача `entra-user-sync`, ежечасно в :15): `GET /users/delta?$select=id,displayName,mail,userPrincipalName,accountEnabled,department,jobTitle` → `identity.User`; delta-ссылка хранится в `integration.SyncCursors`. `accountEnabled=false` или `@removed` → деактивация; запросы деактивированного пользователя отклоняются (`401 USER_INACTIVE`) не позднее чем через 60 с. Создаются только пользователи, уже входившие в CRM.
 - **Календарь (S10):** `POST /me/events` с open extension `no.vardahei.crm` (в ней идентификатор активности), `PATCH` при правке, `DELETE` при снятии; обратное чтение — `GET /me/calendarView` за окно по запросу пользователя. Change notifications (публичный эндпоинт + продление подписок) отложены.
 - **Почта (S10):** `GET /me/messages?$search="participants:…"` по адресам контактов и доменам клиента, плюс настроенные общие ящики (`GET /users/{ящик}/messages`; 403 — ящик просто пропускается). В CRM попадают только `internetMessageId`, тема, участники, дата и ссылка — и только когда человек сохраняет письмо. Тело не копируется.
-- **SharePoint (S10):** сайт «Kunder», библиотека «Dokumenter», папка `{Название} ({оргномер})`; ID папки (`driveItem`) сохраняется в `ExternalLink`; переименование организации → переименование папки.
+- **SharePoint (S10, M47):** сайт с папками клиентов, библиотека (`DriveId` или `DriveName`, по умолчанию «Dokumenter»), корневая папка `RootFolder`. Задача `sharepoint-folders` (worker, `FolderSyncCron`, по умолчанию в :40) кладёт имена папок корневой папки в `integration.ExternalRecords` (`graph`/`Folder`) для экрана «Koblinger» и помечает исчезнувшие. Создание — действие `folder.create` (M39/M43: предпросмотр, журнал `folder-post`, `conflictBehavior: fail`, тёзки блокируют), имя `{Название} ({оргномер})`; ID папки (`driveItem`) хранится в `ExternalLink`. Переименование организации → `folder-rename` в очереди исходящих, только для имени в форме CRM с оргномером клиента. Вкладка читает `GET /drives/{id}/items/{папка}` и `/children?$top=200` делегированно; 404 сверяется с зеркалом: папка, которую задача ещё видит, — «нет доступа», иначе — «удалена». Подробно — `docs/migration/M47-SHAREPOINT-FOUNDATION.md`.
 - **Teams (R2):**
   - Сообщения в каналы («Salg», «Økonomi», «Drift») — через **Workflows webhook** (Power Automate). Коннекторы Office 365 в Teams отключены в мае 2026, поэтому их не используем. Сделано в S10: выигранная сделка дороже порога и утверждённый биллинг-прогон.
   - Персональные уведомления — activity feed через Teams-приложение CRM (личная вкладка с CRM + `TeamsActivity.Send`); требует установленного приложения Teams, поэтому отложено до PoC.
 
 ### 1.5 Делегированный доступ (S10)
 - Календарь и почта работают **от имени вошедшего сотрудника**: BFF берёт токен из своего кэша (`ITokenAcquisition`), интеграция получает его через `IDelegatedTokenSource`. В worker и при входе в режиме разработки токена нет — функции честно отвечают «не подключено», а не падают.
-- Флаги: `Integrations:MicrosoftGraph:CalendarEnabled`, `:MailEnabled`, `:SharedMailboxes` (список общих ящиков), `:SharePoint:{Enabled,SiteId,DriveId|DriveName}`, `:Teams:{Enabled,WonDealThreshold,Channels}`. Всё выключено по умолчанию.
-- SharePoint и Teams не требуют пользователя: папки создаёт управляемая идентичность (`Sites.Selected`), сообщения уходят на URL вебхука, который сам по себе является секретом и лежит в Key Vault.
+- Флаги: `Integrations:MicrosoftGraph:CalendarEnabled`, `:MailEnabled`, `:SharedMailboxes` (список общих ящиков), `:SharePoint:{Enabled,SiteId,DriveId|DriveName,RootFolder,FolderSyncCron,WriteEnabled,DryRun,WriteAllowedCustomerIds,EnabledActions}`, `:Teams:{Enabled,WonDealThreshold,Channels}`. Всё выключено по умолчанию.
+- Папки SharePoint создаёт, переименовывает и перечисляет worker идентичностью приложения (`Sites.Selected`, сертификат только у worker); содержимое папки вкладка читает токеном вошедшего сотрудника (`Files.Read.All`), без токена — «не подключено». Teams не требует пользователя: сообщения уходят на URL вебхука, который сам по себе является секретом.
 
 ## 2. Microsoft Partner Center (CSP)
 

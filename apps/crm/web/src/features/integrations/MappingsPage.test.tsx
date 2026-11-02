@@ -8,11 +8,12 @@ import { MappingsPage } from './MappingsPage';
 
 const status: IntegrationStatus[] = [
   {
-    system: 'poweroffice', enabled: true, recordTypes: ['Customer', 'ContactPerson', 'Product'], records: 3, unlinked: 2,
+    system: 'poweroffice', enabled: true, recordTypes: ['Customer', 'ContactPerson', 'Product'], importableTypes: ['Customer', 'ContactPerson', 'Product'],
+    records: 3, unlinked: 2,
     pendingOutbound: 0, failedOutbound: 0, paused: false, pauseReason: null, pausedAt: null, pausedBy: null,
   },
   {
-    system: 'atera', enabled: false, recordTypes: ['Customer', 'Contact'], records: 0, unlinked: 0,
+    system: 'atera', enabled: false, recordTypes: ['Customer', 'Contact'], importableTypes: ['Customer', 'Contact'], records: 0, unlinked: 0,
     pendingOutbound: 0, failedOutbound: 0, paused: false, pauseReason: null, pausedAt: null, pausedBy: null,
   },
 ];
@@ -60,6 +61,68 @@ describe('MappingsPage', () => {
     });
   });
 
+  it('links a SharePoint folder to a customer and never offers to make a customer of it (M47)', async () => {
+    const sharePoint: IntegrationStatus[] = [{
+      system: 'graph', enabled: true, recordTypes: ['Folder'], importableTypes: [], records: 1, unlinked: 1,
+      pendingOutbound: 0, failedOutbound: 0, paused: false, pauseReason: null, pausedAt: null, pausedBy: null,
+    }];
+    const folders: RecordPage = {
+      total: 1, unlinked: 1, nextCursor: null,
+      items: [{
+        id: 'r9', system: 'graph', externalType: 'Folder', externalId: 'item-9', displayName: 'Kviknes Hotel', orgNumber: null, email: null,
+        phone: null, domain: null, parentExternalId: null, lastSeenAt: '2026-10-30T10:00:00Z', externalChangedAt: null, isGone: false, link: null,
+        suggestions: [{ entityId: 'org-9', name: 'Kviknes Hotel AS', orgNumber: '912345678', reasons: ['SameName'] }],
+      }],
+    };
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => new Response(JSON.stringify(
+      init?.method === 'POST' ? { id: 'l9' } : url.startsWith('/api/v1/integrations/status') ? sharePoint : folders), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    renderRoutes([{ path: '/admin/mappings', element: <MappingsPage /> }], '/admin/mappings?system=graph&type=Folder', testUser(['integrations.manage']));
+
+    const row = (await screen.findByText('Kviknes Hotel')).closest('tr')!;
+    // A SharePoint item id says nothing to a person: the folder is told by its name and when it changed.
+    expect(within(row).queryByText(/#item-9/)).not.toBeInTheDocument();
+    expect(within(row).getByRole('button', { name: 'Choose organization…' })).toBeInTheDocument();
+    expect(within(row).queryByRole('button', { name: 'Create in CRM' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Import all not linked…' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Link exact matches' })).toBeInTheDocument();
+
+    await user.click(within(row).getByRole('button', { name: /Link to Kviknes Hotel AS/ }));
+
+    await waitFor(() => {
+      const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({ system: 'graph', externalType: 'Folder', externalId: 'item-9', entityId: 'org-9' });
+    });
+  });
+
+  it('shows each record as a card on a phone, with the way to link it on the first screen, and words an empty search', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(max-width: 600px)', media: query, onchange: null,
+      addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+    }));
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => new Response(JSON.stringify(
+      init?.method === 'POST' ? { id: 'l1' } : url.startsWith('/api/v1/integrations/status') ? status
+        : url.includes('search=Nothing') ? { total: 0, unlinked: 0, nextCursor: null, items: [] } : page), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    const user = userEvent.setup();
+    renderRoutes([{ path: '/admin/mappings', element: <MappingsPage /> }], '/admin/mappings', testUser(['integrations.manage']));
+
+    const list = await screen.findByRole('list', { name: 'Mappings' });
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    const card = within(list).getByRole('listitem');
+    expect(within(card).getByText('Havbris AS')).toBeVisible();
+    expect(within(card).getByText(/#102/)).toBeVisible();
+    await user.click(within(card).getByRole('button', { name: /Link to Havbris · name/ }));
+    await waitFor(() => {
+      const post = fetch.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(JSON.parse(String(post?.[1]?.body))).toEqual({ system: 'poweroffice', externalType: 'Customer', externalId: '102', entityId: 'org-1' });
+    });
+
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search name, number, e-mail' }), { target: { value: 'Nothing' } });
+    expect(await screen.findByText('No records match the search.')).toBeVisible();
+  });
+
   // The search is read after a pause in typing; a click on a row must not get lost while its answer is on the way (M42 e2e).
   describe('while a search is read', () => {
     const empty: RecordPage = { total: 0, unlinked: 0, nextCursor: null, items: [] };
@@ -76,10 +139,11 @@ describe('MappingsPage', () => {
 
       // An empty answer is not repeated while another search is read.
       fireEvent.change(search, { target: { value: 'Nothing' } });
-      expect(await screen.findByText('No records. They appear after the first synchronization.')).toBeVisible();
+      // A search that finds nothing says so, not that nothing has been read yet.
+      expect(await screen.findByText('No records match the search.')).toBeVisible();
       fireEvent.change(search, { target: { value: 'Havbris' } });
       await requested();
-      expect(screen.queryByText('No records. They appear after the first synchronization.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No records match the search.')).not.toBeInTheDocument();
       await answer(page);
       const row = (await screen.findByText('Havbris AS')).closest('tr')!;
       expect(screen.getByRole('button', { name: 'Not linked, 2' })).toBeVisible();

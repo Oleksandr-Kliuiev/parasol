@@ -332,7 +332,6 @@ public partial class MaintenanceModeTests(CrmWebFactory factory)
             var (customerId, contactId) = await QuoteDocumentsTests.CustomerAsync(salesB, marker);
             var quoteId = await QuoteDocumentsTests.QuoteAsync(salesB, customerId, contactId, marker, "nb");
             (await salesB.PostAsync($"/api/v1/sales/quotes/{quoteId}/submit", null, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
-            var prospectId = await salesB.CreateOrganizationAsync(TestData.Organization($"{marker} Mappe AS"));
             var entityId = Guid.NewGuid();
             var operationId = SequentialId.New();
             await using (var scope = b.Services.CreateAsyncScope())
@@ -358,11 +357,8 @@ public partial class MaintenanceModeTests(CrmWebFactory factory)
             var mail = await salesB.PostAsJsonAsync($"/api/v1/sales/quotes/{quoteId}/send", send, Ct);
             mail.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
             (await mail.ReadJsonAsync()).GetProperty("code").GetString().ShouldBe(MaintenanceHttp.ReadOnlyCode);
-            await using (var scope = b.Services.CreateAsyncScope())
-            {
-                await Should.ThrowAsync<MaintenanceReadOnlyException>(() =>
-                    scope.ServiceProvider.GetRequiredService<IDocumentLibrary>().EnsureFolderAsync(prospectId, Ct));
-            }
+            // A SharePoint folder is no longer created from a request (M47): it is a vendor action, and the action runner asks the
+            // maintenance switch before every attempt like every vendor's (VendorActionApiTests).
 
             probes.Sent.ShouldBe(0);
             QuoteDocumentsTests.Attachments(factory, marker).ShouldBeEmpty();

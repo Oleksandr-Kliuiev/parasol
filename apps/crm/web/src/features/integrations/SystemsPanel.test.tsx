@@ -9,7 +9,7 @@ import { SystemsPanel } from './SystemsPanels';
 
 const status: IntegrationStatus[] = [
   {
-    system: 'poweroffice', enabled: true, recordTypes: ['Customer'], records: 3, unlinked: 1,
+    system: 'poweroffice', enabled: true, recordTypes: ['Customer'], importableTypes: ['Customer'], records: 3, unlinked: 1,
     pendingOutbound: 0, failedOutbound: 0, paused: false, pauseReason: null, pausedAt: null, pausedBy: null,
   },
 ];

@@ -353,6 +353,8 @@ export interface IntegrationStatus {
   system: string;
   enabled: boolean;
   recordTypes: string[];
+  /** The record types a person may turn into Parasoll records; the others are only linked (a SharePoint folder, M47). */
+  importableTypes: string[];
   records: number;
   unlinked: number;
   pendingOutbound: number;

@@ -4,8 +4,11 @@ using Crm.Integrations.Core.Persistence;
 
 namespace Crm.Integrations.Core;
 
-/// <summary>Describes a record type an adapter imports, and what CRM entity it maps to.</summary>
-public sealed record ExternalTypeDescriptor(string System, string ExternalType, string EntityType, string? ParentExternalType = null);
+/// <summary>
+/// Describes a record type an adapter imports, and what CRM entity it maps to. <paramref name="Importable"/> is false for a type that is
+/// only linked, never turned into a new CRM record (a SharePoint folder is not an organization, M47).
+/// </summary>
+public sealed record ExternalTypeDescriptor(string System, string ExternalType, string EntityType, string? ParentExternalType = null, bool Importable = true);
 
 /// <summary>Contributed by each adapter (PowerOffice, Atera…): record types, import into the CRM, status and connection test.</summary>
 public interface IIntegrationAdapter

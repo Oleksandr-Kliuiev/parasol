@@ -21,6 +21,9 @@ const effectValues = (t: TFunction, effect: ActionEffect): Record<string, string
       return { ...values, from: word('priorities', values.from, 'tickets.fields.noPriority'), to: word('priorities', values.to, 'tickets.fields.noPriority') };
     case 'VND_EFFECT_TICKET_TECHNICIAN':
       return { ...values, from: values.from || t('tickets.fields.noTechnician') };
+    case 'VND_EFFECT_SHAREPOINT_FOLDER_CREATE':
+      // M47: "in the folder «Kunder»", never a bare "in Kunder" that reads as the app's own section; the library when none is set.
+      return { ...values, root: values.root ? t('documents.rootFolder', { root: values.root }) : t('documents.libraryRoot') };
     default:
       // M42: a backup's service is CloudAlly's word for it ("Mail"), said the way the backup tab says it; a restore's day as days are.
       return {

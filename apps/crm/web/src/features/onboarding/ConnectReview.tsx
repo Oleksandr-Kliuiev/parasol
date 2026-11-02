@@ -66,7 +66,8 @@ export function ConnectReview({ creates, previews, lines, contractNumber, from }
                     {block && (
                       <MessageBar intent="warning" layout="multiline">
                         <MessageBarBody>
-                          {t(`onboarding.review.blocks.${block.code}`, { system, defaultValue: blockText(t, block) })}
+                          {t([`onboarding.review.blocks.${choice.system}.${block.code}`, `onboarding.review.blocks.${block.code}`],
+                            { system, defaultValue: blockText(t, block) })}
                           {linkable.includes(block.code) && mappingsOf[choice.system] && <>
                             {' '}<AppLink to={mappingsOf[choice.system]!} className={styles.link}>{t('onboarding.mapExisting')}</AppLink>
                           </>}

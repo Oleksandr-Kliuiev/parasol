@@ -1,6 +1,8 @@
 using Azure.Core;
 using Crm.Activities.Contracts;
 using Crm.Customers.Contracts;
+using Crm.Integrations.Core;
+using Crm.Integrations.Core.Actions;
 using Crm.Notifications.Contracts;
 using Crm.SharedKernel.Domain;
 using Crm.Sales.Contracts;
@@ -85,18 +87,35 @@ public static class MicrosoftGraphModule
             .ConfigurePrimaryHttpMessageHandler(NoRedirects)
             .AddStandardResilienceHandler();
 
-        // SharePoint runs on the application identity (Sites.Selected), Teams on a webhook URL that carries its own secret.
-        services.AddHttpClient<GraphDocuments>((sp, client) =>
+        // SharePoint (M47): the card reads a customer's folder with the person's own token (Files.Read.All); crm-worker lists the root
+        // folder for the mapping screen, creates a folder a person asked for and renames one the CRM made, on the application identity
+        // (Sites.Selected). A POST is never repeated automatically: a create that timed out may have been made.
+        services.AddSingleton<SharePointDrive>();
+        services.AddTransient<GraphFilesAuthenticationHandler>();
+        services.AddHttpClient<GraphDocumentLibrary>((sp, client) =>
+            {
+                client.BaseAddress = sp.GetRequiredService<IOptions<GraphOptions>>().Value.BaseUrl;
+                client.Timeout = TimeSpan.FromSeconds(30);
+            })
+            .AddHttpMessageHandler<GraphFilesAuthenticationHandler>()
+            .ConfigurePrimaryHttpMessageHandler(NoRedirects)
+            .AddStandardResilienceHandler();
+        services.AddScoped<IDocumentLibrary>(sp => sp.GetRequiredService<GraphDocumentLibrary>());
+        services.AddHttpClient<SharePointClient>((sp, client) =>
             {
                 client.BaseAddress = sp.GetRequiredService<IOptions<GraphOptions>>().Value.BaseUrl;
                 client.Timeout = TimeSpan.FromSeconds(30);
             })
             .AddHttpMessageHandler<GraphAuthenticationHandler>()
             .ConfigurePrimaryHttpMessageHandler(NoRedirects)
-            .AddStandardResilienceHandler();
-        services.AddScoped<IDocumentLibrary>(sp => sp.GetRequiredService<GraphDocuments>());
-        services.AddScoped<IDomainEventHandler<Crm.Customers.Contracts.OrganizationCreated>, OrganizationFolderHandler>();
+            .AddStandardResilienceHandler(options => options.Retry.DisableForUnsafeHttpMethods());
+        services.AddScoped<IIntegrationAdapter, SharePointAdapter>();
+        services.AddScoped<IVendorActionGate, SharePointActionGate>();
+        services.AddScoped<IVendorActionHandler, SharePointFolderCreation>();
+        services.AddScoped<IOutboundHandler, SharePointFolderRename>();
+        services.AddScoped<SharePointFolderSyncJob>();
         services.AddScoped<IDomainEventHandler<Crm.Customers.Contracts.OrganizationUpdated>, OrganizationFolderHandler>();
+        // Teams runs on a webhook URL that carries its own secret.
         // One attempt of the channel queue is one POST: a webhook has no idempotency key, and an automatic retry of a POST
         // that timed out after Teams took it would post the card twice (DEV-07). The queue retries later instead.
         services.AddHttpClient<ITeamsChannelSender, TeamsChannelSender>(client => client.Timeout = TimeSpan.FromSeconds(15))

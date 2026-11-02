@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { h } from '../../app/hearth';
 import { AppLink } from '../../shared/components/AppLink';
 import { shortKey, systemName } from '../integrations/labels';
-import { choiceValid, emailValid, euRegions, keyValid, mappingsOf, type CreateChoice, type CustomerService } from './connectServices';
+import { choiceValid, emailValid, euRegions, keyValid, mappingsFor, mappingsOf, type CreateChoice, type CustomerService } from './connectServices';
 
 const useStyles = makeStyles({
   list: { listStyleType: 'none', margin: 0, padding: 0, display: 'grid', gap: '0' },
@@ -57,13 +57,15 @@ export function ServiceChoices({ services, choices, touched, onChange }: {
             ) : service.block ? (
               <>
                 <Text className={styles.muted}>
-                  {t(`onboarding.blocks.${service.block}`, { system, name: service.existing ?? '', defaultValue: t(`actions.codes.${service.block}`) })}
+                  {/* A vendor may word a code its own way: SharePoint makes the customer's folder, not a customer. */}
+                  {t([`onboarding.blocks.${service.system}.${service.block}`, `onboarding.blocks.${service.block}`],
+                    { system, name: service.existing ?? '', defaultValue: t(`actions.codes.${service.block}`) })}
                 </Text>
                 {/* An earlier request without an outcome is settled in the action log; anything else is linked by hand. */}
                 {service.block === 'VND_EARLIER_ATTEMPT_OPEN' ? (
                   <AppLink to="/connections" className={styles.link}>{t('onboarding.result.openLog')}</AppLink>
                 ) : mappingsOf[service.system] && (
-                  <AppLink to={mappingsOf[service.system]!} className={styles.link}>{t('onboarding.mapExisting')}</AppLink>
+                  <AppLink to={mappingsFor(service.system, service.existing)!} className={styles.link}>{t('onboarding.mapExisting')}</AppLink>
                 )}
               </>
             ) : (
@@ -84,7 +86,7 @@ function CreateFields({ service, choice, touched, onChange }: {
   const system = systemName(t, service.system);
   const showErrors = touched && choice.create && !choiceValid(choice);
   const noteId = `connect-${service.system}-note`;
-  const hasNote = choice.create && (service.system === 'atera' || service.simulated);
+  const hasNote = choice.create && (service.system === 'atera' || service.system === 'graph' || service.simulated);
   return (
     <>
       <Checkbox checked={choice.create} label={t('onboarding.create', { system })} aria-describedby={hasNote ? noteId : undefined}
@@ -92,6 +94,14 @@ function CreateFields({ service, choice, touched, onChange }: {
       {choice.create && (
         <div className={styles.fields}>
           {service.system === 'atera' && <Text id={noteId} className={styles.muted}>{t('onboarding.atera.note')}</Text>}
+          {service.system === 'graph' && (
+            <Text id={noteId} className={styles.muted}>
+              {t('onboarding.graph.note', {
+                name: service.defaults.name ?? '',
+                root: service.defaults.root ? t('documents.rootFolder', { root: service.defaults.root }) : t('documents.libraryRoot'),
+              })}
+            </Text>
+          )}
           {service.system === 'huntress' && (
             <Field label={t('onboarding.huntress.key')} required hint={t('onboarding.huntress.keyHint')}
               validationMessage={showErrors && !keyValid(choice.key) ? t('onboarding.huntress.keyInvalid') : undefined}>
@@ -112,7 +122,9 @@ function CreateFields({ service, choice, touched, onChange }: {
               </Field>
             </>
           )}
-          {service.simulated && <Text id={service.system === 'atera' ? undefined : noteId} className={styles.muted}>{t('onboarding.simulated', { system })}</Text>}
+          {service.simulated && (
+            <Text id={service.system === 'atera' || service.system === 'graph' ? undefined : noteId} className={styles.muted}>{t('onboarding.simulated', { system })}</Text>
+          )}
         </div>
       )}
     </>

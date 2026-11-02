@@ -42,6 +42,7 @@ public static class FreshnessLimits
         ["partnercenter-billing"] = ("Integrations:PartnerCenter:BillingSyncCron", "20 4 * * *"),
         ["entra-user-sync"] = ("Integrations:MicrosoftGraph:UserSyncCron", "15 * * * *"),
         ["entra-role-sync"] = ("Integrations:MicrosoftGraph:RoleSyncCron", "*/2 * * * *"),
+        ["sharepoint-folders"] = ("Integrations:MicrosoftGraph:SharePoint:FolderSyncCron", "40 * * * *"),
         ["brreg-registry-check"] = (null, "0 2 * * *"),
     };
 
